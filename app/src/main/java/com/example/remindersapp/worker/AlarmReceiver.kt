@@ -3,29 +3,21 @@ package com.example.remindersapp.worker
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
+import androidx.core.content.ContextCompat
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // 从 Intent 中获取传递过来的数据
-        val title = intent.getStringExtra(ReminderWorker.KEY_TITLE) ?: "提醒"
-        val content = intent.getStringExtra(ReminderWorker.KEY_CONTENT) ?: ""
-        val reminderId = intent.getIntExtra("REMINDER_ID", 0)
+        // 从 AlarmManager 的 Intent 中提取数据
+        val title = intent.getStringExtra(RingtoneService.EXTRA_TITLE) ?: "提醒"
+        val content = intent.getStringExtra(RingtoneService.EXTRA_CONTENT) ?: ""
 
-        // 创建一个零延迟的 WorkManager 任务
-        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInputData(workDataOf(
-                ReminderWorker.KEY_TITLE to title,
-                ReminderWorker.KEY_CONTENT to content
-            ))
-            .addTag(reminderId.toString())
-            .build()
+        // 创建启动 RingtoneService 的 Intent
+        val serviceIntent = Intent(context, RingtoneService::class.java).apply {
+            putExtra(RingtoneService.EXTRA_TITLE, title)
+            putExtra(RingtoneService.EXTRA_CONTENT, content)
+        }
 
-        // 立即执行任务
-        WorkManager.getInstance(context).enqueue(workRequest)
-
-        // 如果是重启广播，需要重新调度所有闹钟 (此部分逻辑较复杂，可作为后续优化)
+        // 使用 ContextCompat.startForegroundService 来安全地启动服务
+        ContextCompat.startForegroundService(context, serviceIntent)
     }
 }

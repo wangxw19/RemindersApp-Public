@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
-    <!-- 保留最核心的权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- 移除 RECEIVE_BOOT_COMPLETED 权限，因为我们暂未实现重启后恢复闹钟的复杂逻辑 -->
+    <!-- - 新增：前台服务权限 - -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- - 新增：Android 14+ 需要更具体的前台服务类型 - -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
 
     <application
         android:name=".RemindersApplication"
@@ -32,12 +35,21 @@
             </intent-filter>
         </activity>
 
-        <!-- 移除 AlarmReceiver 对 BOOT_COMPLETED 的 intent-filter -->
         <receiver
             android:name=".worker.AlarmReceiver"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- - 新增：声明我们的铃声服务 - -->
+        <service
+            android:name=".worker.RingtoneService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
     </application>
-
 </manifest>
