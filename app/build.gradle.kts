@@ -41,7 +41,7 @@ android {
 
     // --- 这是实现自定义文件名的最终、最简单的方案 ---
     // 这个配置会影响所有构建变体（debug 和 release）
-    setProperty("archivesBaseName", "RemindersApp-v${defaultConfig.versionName}")
+    setProperty("archivesBaseName", "RemindersApp-v${defaultConfig.versionName}-${defaultConfig.versionCode}")
 
     buildTypes {
         release {
@@ -113,7 +113,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.compose:ui-test-junit4")
+    debugImplementation("androidx.compose:ui-tooling")
+    debugImplementation("androidx.compose:ui-test-manifest")
 }
