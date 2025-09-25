@@ -28,7 +28,6 @@ fun AppNavHost(
         startDestination = AppDestinations.LIST_ROUTE,
         modifier = modifier
     ) {
-        // 列表页路由
         composable(route = AppDestinations.LIST_ROUTE) {
             ReminderListScreen(
                 onItemClick = { reminderId ->
@@ -40,7 +39,6 @@ fun AppNavHost(
             )
         }
 
-        // 详情页路由
         composable(
             route = "${AppDestinations.DETAILS_ROUTE}/{${AppDestinations.ITEM_ID_ARG}}",
             arguments = listOf(navArgument(AppDestinations.ITEM_ID_ARG) { type = NavType.IntType })
@@ -50,7 +48,6 @@ fun AppNavHost(
             )
         }
 
-        // 已完成列表的路由
         composable(route = AppDestinations.COMPLETED_ROUTE) {
             CompletedListScreen(
                 onItemClick = { reminderId ->

@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -24,10 +25,11 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    // 注意：现在 AppScaffold 应该能被正确识别了
-                    AppScaffold(navController = navController) {
-                        // 我们将 AppNavHost 放在这里，不再传递 PaddingValues
-                        AppNavHost(navController = navController)
+                    AppScaffold(navController = navController) { innerPadding ->
+                        AppNavHost(
+                            navController = navController,
+                            modifier = Modifier.padding(innerPadding)
+                        )
                     }
                 }
             }

@@ -26,7 +26,8 @@ class CompletedListViewModel @Inject constructor(
             .map { CompletedListUiState(it) }
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000L), // 修正拼写
+                // --- 核心修正：修复拼写错误 ---
+                started = SharingStarted.WhileSubscribed(5_000L),
                 initialValue = CompletedListUiState()
             )
 

@@ -24,7 +24,6 @@ fun CompletedListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val reminders = uiState.completedReminders
 
-    // 为这个页面也添加一个 Scaffold，以保持 UI 一致性
     Scaffold { innerPadding ->
         if (reminders.isEmpty()) {
             Box(

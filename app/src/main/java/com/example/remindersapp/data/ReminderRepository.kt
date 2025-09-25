@@ -9,6 +9,7 @@ interface ReminderRepository {
     suspend fun insertReminder(reminder: Reminder): Long
     suspend fun updateReminder(reminder: Reminder)
     suspend fun deleteReminder(reminder: Reminder)
+    // --- 新增接口方法 ---
     fun getCompletedRemindersStream(): Flow<List<Reminder>>
 }
 
@@ -30,6 +31,7 @@ class OfflineReminderRepository @Inject constructor(
     override suspend fun deleteReminder(reminder: Reminder) =
         reminderDao.delete(reminder)
 
+    // --- 实现接口方法 ---
     override fun getCompletedRemindersStream(): Flow<List<Reminder>> =
         reminderDao.getCompletedReminders()
 }

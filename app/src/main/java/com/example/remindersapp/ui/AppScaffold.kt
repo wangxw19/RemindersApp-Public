@@ -1,9 +1,6 @@
 package com.example.remindersapp.ui
 
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -36,10 +33,7 @@ fun AppScaffold(
                     label = { Text("所有提醒") },
                     selected = currentRoute == AppDestinations.LIST_ROUTE,
                     onClick = {
-                        navController.navigate(AppDestinations.LIST_ROUTE) {
-                            launchSingleTop = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        }
+                        navController.navigate(AppDestinations.LIST_ROUTE)
                         scope.launch { drawerState.close() }
                     }
                 )
@@ -47,20 +41,31 @@ fun AppScaffold(
                     label = { Text("已完成") },
                     selected = currentRoute == AppDestinations.COMPLETED_ROUTE,
                     onClick = {
-                        navController.navigate(AppDestinations.COMPLETED_ROUTE) {
-                            launchSingleTop = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        }
+                        navController.navigate(AppDestinations.COMPLETED_ROUTE)
                         scope.launch { drawerState.close() }
                     }
                 )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                // 可以在这里添加更多菜单项，比如“设置”
             }
         }
     ) {
-        // Scaffold 已被我们废弃，因为我们将在每个屏幕内部根据需要提供它
-        // 这里直接调用 mainContent
-        mainContent(PaddingValues(0.dp)) // 传递一个空的 PaddingValues
+        // 全局 Scaffold，只包含在所有页面都共用的 TopAppBar
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("提醒事项") },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            scope.launch {
+                                drawerState.apply { if (isClosed) open() else close() }
+                            }
+                        }) {
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "打开菜单")
+                        }
+                    }
+                )
+            },
+        ) { innerPadding ->
+            mainContent(innerPadding)
+        }
     }
 }
