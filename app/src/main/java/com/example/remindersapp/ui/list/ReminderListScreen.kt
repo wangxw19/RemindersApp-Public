@@ -54,7 +54,7 @@ fun ReminderListScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3ai::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderList(
     reminders: List<Reminder>,
