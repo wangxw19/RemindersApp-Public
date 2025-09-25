@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// --- 模块化交互的基石：定义 UI 事件 ---
 sealed class ReminderListEvent {
     data class OnToggleCompleted(val reminder: Reminder) : ReminderListEvent()
     data class OnSwipeToDelete(val reminder: Reminder) : ReminderListEvent()
@@ -34,11 +33,11 @@ class ReminderListViewModel @Inject constructor(
             .map { ReminderListUiState(it) }
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000L),
+                // --- 核心修正：使用 Eagerly 策略，确保数据流永远是热的 ---
+                started = SharingStarted.Eagerly,
                 initialValue = ReminderListUiState()
             )
 
-    // --- 统一的事件处理入口 ---
     fun onEvent(event: ReminderListEvent) {
         when (event) {
             is ReminderListEvent.OnToggleCompleted -> {
@@ -54,9 +53,10 @@ class ReminderListViewModel @Inject constructor(
         viewModelScope.launch {
             val updatedReminder = reminder.copy(isCompleted = !reminder.isCompleted)
             reminderRepository.updateReminder(updatedReminder)
-            // 如果任务重新激活并有截止日期，则重新调度
             if (!updatedReminder.isCompleted && updatedReminder.dueDate != null) {
                 scheduler.schedule(updatedReminder)
+            } else if (updatedReminder.isCompleted) {
+                scheduler.cancel(updatedReminder.id)
             }
         }
     }
