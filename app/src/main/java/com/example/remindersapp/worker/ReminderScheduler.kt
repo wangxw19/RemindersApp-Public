@@ -7,11 +7,19 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+// --- 步骤 1：将接口定义合并到此文件顶部 ---
+/**
+ * 定义了调度后台任务的契约.
+ * 这是一个接口，方便在测试中替换为模拟实现.
+ */
 interface Scheduler {
     fun schedule(reminder: Reminder)
     fun cancel(reminderId: Int)
 }
 
+/**
+ * Scheduler 接口的生产环境实现，使用 WorkManager.
+ */
 class ReminderScheduler @Inject constructor(
     @ApplicationContext private val context: Context
 ) : Scheduler {
@@ -30,18 +38,16 @@ class ReminderScheduler @Inject constructor(
             val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                 .setInputData(data)
+                .addTag(reminder.id.toString())
                 .build()
 
-            // 使用唯一的 ID 来安排任务，方便之后取消或更新
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                reminder.id.toString(),
-                ExistingWorkPolicy.REPLACE, // 如果已存在同名任务，则替换它
-                workRequest
-            )
+            // 先取消旧任务，再入队新任务，确保任务总是最新的
+            WorkManager.getInstance(context).cancelAllWorkByTag(reminder.id.toString())
+            WorkManager.getInstance(context).enqueue(workRequest)
         }
     }
 
     override fun cancel(reminderId: Int) {
-        WorkManager.getInstance(context).cancelUniqueWork(reminderId.toString())
+        WorkManager.getInstance(context).cancelAllWorkByTag(reminderId.toString())
     }
 }
