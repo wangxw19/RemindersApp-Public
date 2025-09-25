@@ -4,65 +4,59 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.example.remindersapp.MainActivity
 import com.example.remindersapp.data.AppState
-import com.example.remindersapp.data.ReminderRepository
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
 
-@AndroidEntryPoint
 class AlarmReceiver : BroadcastReceiver() {
 
-    @Inject
-    lateinit var appState: AppState
-
-    @Inject
-    lateinit var ringtonePlayer: RingtonePlayer
-
-    @Inject
-    lateinit var repository: ReminderRepository
-
-    // 使用 IO 调度器进行数据库查询
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    companion object {
+        const val EXTRA_REMINDER_ID = "REMINDER_ID"
+        const val EXTRA_TITLE = "EXTRA_TITLE"
+        const val EXTRA_CONTENT = "EXTRA_CONTENT"
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
-        // --- 核心改动 1：获取 PendingResult，阻止 Receiver 被立即杀死 ---
-        val pendingResult = goAsync()
+        val reminderId = intent.getIntExtra(EXTRA_REMINDER_ID, -1)
+        if (reminderId == -1) return
 
-        val reminderId = intent.getIntExtra("REMINDER_ID", -1)
-        if (reminderId == -1) {
-            pendingResult.finish() // 如果 ID 无效，也要结束
-            return
-        }
+        val title = intent.getStringExtra(EXTRA_TITLE) ?: "提醒"
+        val content = intent.getStringExtra(EXTRA_CONTENT) ?: ""
 
-        scope.launch {
-            try {
-                // 异步从数据库获取提醒详情
-                val reminder = repository.getReminderStream(reminderId).first()
+        // 手动从 ApplicationContext 获取 Hilt 注入的单例
+        val hiltEntryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            AppStateEntryPoint::class.java
+        )
+        val appState = hiltEntryPoint.getAppState()
 
-                if (reminder != null) {
-                    // 判断 App 是否在前台
-                    if (appState.isAppInForeground.value) {
-                        // 在前台：直接播放铃声，并更新全局 UI 状态
-                        ringtonePlayer.start()
-                        appState.startRinging(reminder)
-                    } else {
-                        // 在后台：启动 RingtoneService，通过通知提醒
-                        val serviceIntent = Intent(context, RingtoneService::class.java).apply {
-                            putExtra(RingtoneService.EXTRA_TITLE, reminder.title)
-                            putExtra(RingtoneService.EXTRA_CONTENT, reminder.notes)
-                        }
-                        ContextCompat.startForegroundService(context, serviceIntent)
-                    }
-                }
-            } finally {
-                // --- 核心改动 2：无论成功与否，都要调用 finish()，通知系统异步工作已完成 ---
-                pendingResult.finish()
+        // 使用 runBlocking 是因为 onReceive 生命周期极短，我们需要在这里同步地获取前台状态
+        val isAppInForeground = runBlocking { appState.isAppInForeground.first() }
+
+        if (isAppInForeground) {
+            // App 在前台：启动 MainActivity 并传递提醒信息
+            val activityIntent = Intent(context, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_SHOW_RINGING_REMINDER
+                putExtra(EXTRA_REMINDER_ID, reminderId)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
+            context.startActivity(activityIntent)
+        } else {
+            // App 在后台：启动 RingtoneService
+            val serviceIntent = Intent(context, RingtoneService::class.java).apply {
+                putExtra(RingtoneService.EXTRA_TITLE, title)
+                putExtra(RingtoneService.EXTRA_CONTENT, content)
+            }
+            ContextCompat.startForegroundService(context, serviceIntent)
         }
     }
+}
+
+// 定义一个 Hilt 入口点，以便在 Receiver 中安全地获取单例
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+interface AppStateEntryPoint {
+    fun getAppState(): AppState
 }

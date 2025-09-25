@@ -17,15 +17,20 @@ class RingtonePlayer @Inject constructor(
         if (mediaPlayer?.isPlaying == true) {
             return
         }
-        mediaPlayer?.release() // Release any previous instance
+        stop() // 先停止并释放任何旧的实例
+
         mediaPlayer = MediaPlayer.create(context, R.raw.reminder_ringtone).apply {
             isLooping = true
+            // --- 核心改动：设置音量为 50% ---
+            setVolume(0.5f, 0.5f)
             start()
         }
     }
 
     fun stop() {
-        mediaPlayer?.stop()
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer?.stop()
+        }
         mediaPlayer?.release()
         mediaPlayer = null
     }
