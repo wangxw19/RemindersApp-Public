@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.remindersapp.data.Priority
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -104,7 +107,7 @@ fun ReminderDetailsScreen(
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             modifier = Modifier.wrapContentSize(),
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
                 TextButton(onClick = {
@@ -154,22 +157,25 @@ fun ReminderDetailsScreen(
                 value = uiState.title,
                 onValueChange = { viewModel.onEvent(DetailsUIEvent.OnTitleChange(it)) },
                 label = { Text("标题") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = uiState.title.isBlank() && viewModel.hasChanges
             )
             OutlinedTextField(
                 value = uiState.notes,
                 onValueChange = { viewModel.onEvent(DetailsUIEvent.OnNotesChange(it)) },
                 label = { Text("备注") },
-                modifier = Modifier.fillMaxWidth().height(150.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
             )
 
-            // 优先级选择
             Text("优先级", style = MaterialTheme.typography.titleMedium)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 Priority.values().forEach { priority ->
                     SegmentedButton(
                         selected = uiState.priority == priority,
                         onClick = { viewModel.onEvent(DetailsUIEvent.OnPriorityChange(priority)) },
+                        // --- 核心修正：移除多余参数，使用无参函数 ---
                         shape = SegmentedButtonDefaults.shape()
                     ) {
                         Text(priority.displayName)
@@ -177,7 +183,6 @@ fun ReminderDetailsScreen(
                 }
             }
 
-            // 日期时间选择
             Text("设置提醒", style = MaterialTheme.typography.titleMedium)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,7 +202,12 @@ fun ReminderDetailsScreen(
                     FilterChip(
                         selected = true,
                         onClick = { showTimePicker = true },
-                        label = { Text(formatTime(uiState.dueDate!!)) }
+                        label = { Text(formatTime(uiState.dueDate!!)) },
+                        trailingIcon = {
+                            IconButton(onClick = { viewModel.onEvent(DetailsUIEvent.OnClearDate) }, modifier = Modifier.size(18.dp)) {
+                                Icon(Icons.Default.Clear, contentDescription = "清除时间")
+                            }
+                        }
                     )
                 }
             }

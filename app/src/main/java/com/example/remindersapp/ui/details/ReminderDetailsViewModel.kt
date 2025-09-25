@@ -1,5 +1,8 @@
 package com.example.remindersapp.ui.details
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,7 +19,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
-
 
 sealed class DetailsScreenEvent {
     data class ShowToast(val message: String) : DetailsScreenEvent()
@@ -133,7 +135,7 @@ class ReminderDetailsViewModel @Inject constructor(
                 return@launch
             }
 
-            val isCompletedState = if(uiState.isNew) false else repository.getReminderStream(uiState.id).filterNotNull().first().isCompleted
+            val isCompletedState = if (uiState.isNew) false else repository.getReminderStream(uiState.id).filterNotNull().first().isCompleted
 
             val reminderToSave = Reminder(
                 id = uiState.id,
@@ -155,6 +157,7 @@ class ReminderDetailsViewModel @Inject constructor(
                 if (reminderToSave.dueDate != null && reminderToSave.dueDate!! > System.currentTimeMillis()) {
                     scheduler.schedule(reminderToSave)
                 } else {
+                    // 如果更新后的任务没有日期或日期已过，取消现有的调度
                     scheduler.cancel(reminderToSave.id)
                 }
             }
