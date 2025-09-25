@@ -2,7 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Android 13 (API 33) 及以上版本需要此权限来发送通知 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- - 新增：震动权限 - -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".RemindersApplication"
@@ -13,7 +17,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RemindersApp">
+        android:theme="@style/Theme.RemindersApp"
+        tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -21,7 +26,6 @@
             android:theme="@style/Theme.RemindersApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
