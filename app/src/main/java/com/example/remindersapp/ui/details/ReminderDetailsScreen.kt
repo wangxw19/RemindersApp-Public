@@ -1,6 +1,11 @@
 package com.example.remindersapp.ui.details
+
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -23,6 +28,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun ReminderDetailsScreen(
@@ -32,6 +38,9 @@ fun ReminderDetailsScreen(
     val uiState = viewModel.uiState
     val context = LocalContext.current
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
     val postNotificationPermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
@@ -129,15 +138,23 @@ fun ReminderDetailsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                if (uiState.dueDate != null && uiState.dueDate!! > System.currentTimeMillis()) {
-                    if (postNotificationPermission == null || postNotificationPermission.status.isGranted) {
-                        viewModel.onEvent(DetailsUIEvent.OnSaveClick)
-                    } else {
-                        postNotificationPermission.launchPermissionRequest()
+                val isFutureReminder = uiState.dueDate != null && uiState.dueDate!! > System.currentTimeMillis()
+
+                if (isFutureReminder) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                        Toast.makeText(context, "请授予精确闹钟权限以保证准时提醒", Toast.LENGTH_LONG).show()
+                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                        context.startActivity(intent)
+                        return@FloatingActionButton
                     }
-                } else {
-                    viewModel.onEvent(DetailsUIEvent.OnSaveClick)
+
+                    if (postNotificationPermission != null && !postNotificationPermission.status.isGranted) {
+                        postNotificationPermission.launchPermissionRequest()
+                        return@FloatingActionButton
+                    }
                 }
+
+                viewModel.onEvent(DetailsUIEvent.OnSaveClick)
             }) {
                 Icon(Icons.Default.Check, contentDescription = "保存")
             }
@@ -152,6 +169,7 @@ fun ReminderDetailsScreen(
         ) {
             OutlinedTextField(
                 value = uiState.title,
+                // --- 核心修正：修复拼写错误 ---
                 onValueChange = { viewModel.onEvent(DetailsUIEvent.OnTitleChange(it)) },
                 label = { Text("标题") },
                 modifier = Modifier.fillMaxWidth(),
@@ -166,7 +184,6 @@ fun ReminderDetailsScreen(
                     .height(150.dp)
             )
 
-            // --- 全新、更简单的优先级选择实现 ---
             Text("优先级", style = MaterialTheme.typography.titleMedium)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -180,7 +197,6 @@ fun ReminderDetailsScreen(
                     )
                 }
             }
-            // --- 实现结束 ---
 
             Text("设置提醒", style = MaterialTheme.typography.titleMedium)
             Row(
@@ -213,10 +229,12 @@ fun ReminderDetailsScreen(
         }
     }
 }
+
 private fun formatDate(millis: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     return formatter.format(Date(millis))
 }
+
 private fun formatTime(millis: Long): String {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     return formatter.format(Date(millis))

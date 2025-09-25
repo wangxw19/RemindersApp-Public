@@ -1,10 +1,26 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // --- 这是解决问题的关键改动 ---
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+}
+
+// --- 函数：执行 Git 命令并获取版本号 ---
+fun getVersionCodeFromGit(): Int {
+    return try {
+        val byteOut = ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            standardOutput = byteOut
+        }
+        byteOut.toString().trim().toInt()
+    } catch (e: Exception) {
+        // 在 Git 不可用或出错的情况下，提供一个安全的默认值
+        1
+    }
 }
 
 android {
@@ -15,7 +31,10 @@ android {
         applicationId = "com.example.remindersapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+
+        // --- 核心改动：自动设置 versionCode ---
+        versionCode = getVersionCodeFromGit()
+        // versionName 依然手动维护，用于市场展示
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -43,9 +62,6 @@ android {
     buildFeatures {
         compose = true
     }
-    // 注意：从 Kotlin 2.0 开始，kotlinCompilerExtensionVersion 字段
-    // 通常不再需要在这里指定，因为它由新的 compose 插件管理。
-    // 但为了兼容性，我们暂时保留它。
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
