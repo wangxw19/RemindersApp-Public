@@ -1,5 +1,6 @@
 package com.example.remindersapp.ui.list
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.remindersapp.data.Reminder
@@ -28,12 +29,21 @@ class ReminderListViewModel @Inject constructor(
     private val scheduler: Scheduler
 ) : ViewModel() {
 
+    init {
+        // --- 哨兵 V1: 确认 ViewModel 已被 Hilt 成功创建 ---
+        Log.d("AppDebug", "ViewModel: ReminderListViewModel INITIALIZED")
+    }
+
     val uiState: StateFlow<ReminderListUiState> =
         reminderRepository.getIncompleteRemindersStream()
-            .map { ReminderListUiState(it) }
+            .map { reminders ->
+                // --- 哨兵 V2: 确认 ViewModel 正在处理从 Repository 过来的数据 ---
+                Log.d("AppDebug", "ViewModel: Mapping ${reminders.size} items to UiState")
+                ReminderListUiState(reminders)
+            }
             .stateIn(
                 scope = viewModelScope,
-                // --- 核心修正：使用 Eagerly 策略，确保数据流永远是热的 ---
+                // 我们暂时使用 Eagerly 策略来解决问题，日志会告诉我们这是否是根源
                 started = SharingStarted.Eagerly,
                 initialValue = ReminderListUiState()
             )

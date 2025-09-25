@@ -1,5 +1,6 @@
 package com.example.remindersapp.ui.list
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -65,6 +66,8 @@ fun ReminderList(
     onItemClick: (Reminder) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    Log.d("AppDebug", "Screen: ReminderList RECOMPOSING with ${reminders.size} items")
+
     if (reminders.isEmpty()) {
         EmptyContent(
             title = "空空如也",
@@ -77,17 +80,50 @@ fun ReminderList(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(items = reminders, key = { it.id }) { reminder ->
-                SwipeToDeleteContainer(
+                // --- 核心修正：将 SwipeToDeleteContainer 的内容直接在此处实现 ---
+                var isRemoved by remember { mutableStateOf(false) }
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart) {
+                            isRemoved = true
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                )
+
+                LaunchedEffect(key1 = isRemoved) {
+                    if (isRemoved) {
+                        delay(500)
+                        onEvent(ReminderListEvent.OnSwipeToDelete(reminder))
+                    }
+                }
+
+                AnimatedVisibility(
+                    // animateItemPlacement 必须直接应用在这里
                     modifier = Modifier.animateItemPlacement(
                         animationSpec = tween(durationMillis = 300)
                     ),
-                    item = reminder,
-                    onDelete = { onEvent(ReminderListEvent.OnSwipeToDelete(it)) }
+                    visible = !isRemoved,
+                    exit = shrinkVertically(
+                        animationSpec = tween(durationMillis = 500),
+                        shrinkTowards = Alignment.Top
+                    ) + fadeOut()
                 ) {
-                    ReminderItem(
-                        reminder = it,
-                        onCheckedChange = { onEvent(ReminderListEvent.OnToggleCompleted(it)) },
-                        onItemClick = { onItemClick(it) }
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        backgroundContent = {
+                            DeleteBackground(swipeDismissState = dismissState)
+                        },
+                        content = {
+                            ReminderItem(
+                                reminder = reminder,
+                                onCheckedChange = { onEvent(ReminderListEvent.OnToggleCompleted(reminder)) },
+                                onItemClick = { onItemClick(reminder) }
+                            )
+                        },
+                        enableDismissFromStartToEnd = false
                     )
                 }
                 HorizontalDivider()
@@ -95,6 +131,7 @@ fun ReminderList(
         }
     }
 }
+
 
 @Composable
 fun EmptyContent(
@@ -134,54 +171,6 @@ fun EmptyContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> SwipeToDeleteContainer(
-    modifier: Modifier = Modifier,
-    item: T,
-    onDelete: (T) -> Unit,
-    animationDuration: Int = 500,
-    content: @Composable (T) -> Unit
-) {
-    var isRemoved by remember { mutableStateOf(false) }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
-                isRemoved = true
-                true
-            } else {
-                false
-            }
-        },
-        positionalThreshold = { it * .5f }
-    )
-
-    LaunchedEffect(key1 = isRemoved) {
-        if (isRemoved) {
-            delay(animationDuration.toLong())
-            onDelete(item)
-        }
-    }
-
-    AnimatedVisibility(
-        modifier = modifier,
-        visible = !isRemoved,
-        exit = shrinkVertically(
-            animationSpec = tween(durationMillis = animationDuration),
-            shrinkTowards = Alignment.Top
-        ) + fadeOut()
-    ) {
-        SwipeToDismissBox(
-            state = dismissState,
-            backgroundContent = {
-                DeleteBackground(swipeDismissState = dismissState)
-            },
-            content = { content(item) },
-            enableDismissFromStartToEnd = false
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun DeleteBackground(swipeDismissState: SwipeToDismissBoxState) {
     val color = when (swipeDismissState.targetValue) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -203,7 +192,6 @@ fun DeleteBackground(swipeDismissState: SwipeToDismissBoxState) {
     }
 }
 
-// --- 这是本次核心修改的组件 ---
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun ReminderItem(
@@ -217,7 +205,7 @@ fun ReminderItem(
         label = "CardElevation"
     )
 
-    Surface( // 使用 Surface 来承载 elevation 效果
+    Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         shadowElevation = cardElevation,
@@ -240,7 +228,6 @@ fun ReminderItem(
             )
             Spacer(modifier = Modifier.width(16.dp))
 
-            // 使用 AnimatedContent 实现文本切换动画
             AnimatedContent(
                 targetState = reminder.isCompleted,
                 label = "ReminderTextAnimation",

@@ -1,6 +1,8 @@
 package com.example.remindersapp.data
 
+import android.util.Log
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 interface ReminderRepository {
@@ -9,15 +11,21 @@ interface ReminderRepository {
     suspend fun insertReminder(reminder: Reminder): Long
     suspend fun updateReminder(reminder: Reminder)
     suspend fun deleteReminder(reminder: Reminder)
-    // --- 新增接口方法 ---
     fun getCompletedRemindersStream(): Flow<List<Reminder>>
 }
 
 class OfflineReminderRepository @Inject constructor(
     private val reminderDao: ReminderDao
 ) : ReminderRepository {
-    override fun getIncompleteRemindersStream(): Flow<List<Reminder>> =
-        reminderDao.getIncompleteReminders()
+    override fun getIncompleteRemindersStream(): Flow<List<Reminder>> {
+        // --- 哨兵 R1: 确认数据请求已到达 Repository ---
+        Log.d("AppDebug", "Repository: getIncompleteRemindersStream CALLED")
+
+        return reminderDao.getIncompleteReminders().onEach { reminders ->
+            // --- 哨兵 R2: 确认 Room 的 Flow 正在发射数据 ---
+            Log.d("AppDebug", "Repository: Flow EMITTED ${reminders.size} items from DB")
+        }
+    }
 
     override fun getReminderStream(id: Int): Flow<Reminder?> =
         reminderDao.getReminderById(id)
@@ -31,7 +39,6 @@ class OfflineReminderRepository @Inject constructor(
     override suspend fun deleteReminder(reminder: Reminder) =
         reminderDao.delete(reminder)
 
-    // --- 实现接口方法 ---
     override fun getCompletedRemindersStream(): Flow<List<Reminder>> =
         reminderDao.getCompletedReminders()
 }

@@ -75,6 +75,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.0")
     implementation("androidx.activity:activity-compose:1.9.1")
+    implementation(libs.androidx.animation)
 
     // Jetpack Compose - 使用最新的 BOM 来统一管理版本
     val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
