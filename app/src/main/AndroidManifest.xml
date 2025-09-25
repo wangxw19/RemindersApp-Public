@@ -2,14 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 通知权限 -->
+    <!-- 保留最核心的权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- 震动权限 -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- 精确闹钟权限 (Android 12+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- 开机广播权限 -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- 移除 RECEIVE_BOOT_COMPLETED 权限，因为我们暂未实现重启后恢复闹钟的复杂逻辑 -->
 
     <application
         android:name=".RemindersApplication"
@@ -34,15 +32,11 @@
             </intent-filter>
         </activity>
 
-        <!-- 声明 AlarmReceiver -->
+        <!-- 移除 AlarmReceiver 对 BOOT_COMPLETED 的 intent-filter -->
         <receiver
             android:name=".worker.AlarmReceiver"
             android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
+            android:exported="false" />
 
     </application>
 
