@@ -1,5 +1,4 @@
 package com.example.remindersapp.ui.details
-
 import android.Manifest
 import android.os.Build
 import android.widget.Toast
@@ -24,7 +23,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun ReminderDetailsScreen(
@@ -34,7 +32,6 @@ fun ReminderDetailsScreen(
     val uiState = viewModel.uiState
     val context = LocalContext.current
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
-
     val postNotificationPermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
@@ -84,7 +81,7 @@ fun ReminderDetailsScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = uiState.dueDate)
     val timePickerState = rememberTimePickerState(
-        initialHour = uiState.dueDate?.let { Calendar.getInstance().apply { timeInMillis = it }.get(Calendar.HOUR_OF_DAY) } ?: 0,
+        initialHour = uiState.dueDate?.let { Calendar.getInstance().apply { timeInMillis = it }.get(Calendar.HOUR_OF_DAY) } ?: 12,
         initialMinute = uiState.dueDate?.let { Calendar.getInstance().apply { timeInMillis = it }.get(Calendar.MINUTE) } ?: 0,
         is24Hour = true
     )
@@ -132,7 +129,7 @@ fun ReminderDetailsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                if (uiState.dueDate != null && (uiState.dueDate ?: 0) > System.currentTimeMillis()) {
+                if (uiState.dueDate != null && uiState.dueDate!! > System.currentTimeMillis()) {
                     if (postNotificationPermission == null || postNotificationPermission.status.isGranted) {
                         viewModel.onEvent(DetailsUIEvent.OnSaveClick)
                     } else {
@@ -169,19 +166,21 @@ fun ReminderDetailsScreen(
                     .height(150.dp)
             )
 
+            // --- 全新、更简单的优先级选择实现 ---
             Text("优先级", style = MaterialTheme.typography.titleMedium)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                Priority.values().forEach { priority ->
-                    SegmentedButton(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Priority.entries.forEach { priority ->
+                    FilterChip(
                         selected = uiState.priority == priority,
                         onClick = { viewModel.onEvent(DetailsUIEvent.OnPriorityChange(priority)) },
-                        // --- 核心修正：移除多余参数，使用无参函数 ---
-                        shape = SegmentedButtonDefaults.shape()
-                    ) {
-                        Text(priority.displayName)
-                    }
+                        label = { Text(priority.displayName) }
+                    )
                 }
             }
+            // --- 实现结束 ---
 
             Text("设置提醒", style = MaterialTheme.typography.titleMedium)
             Row(
@@ -202,7 +201,7 @@ fun ReminderDetailsScreen(
                     FilterChip(
                         selected = true,
                         onClick = { showTimePicker = true },
-                        label = { Text(formatTime(uiState.dueDate!!)) },
+                        label = { Text(formatTime(uiState.dueDate)) },
                         trailingIcon = {
                             IconButton(onClick = { viewModel.onEvent(DetailsUIEvent.OnClearDate) }, modifier = Modifier.size(18.dp)) {
                                 Icon(Icons.Default.Clear, contentDescription = "清除时间")
@@ -214,12 +213,10 @@ fun ReminderDetailsScreen(
         }
     }
 }
-
 private fun formatDate(millis: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     return formatter.format(Date(millis))
 }
-
 private fun formatTime(millis: Long): String {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     return formatter.format(Date(millis))
