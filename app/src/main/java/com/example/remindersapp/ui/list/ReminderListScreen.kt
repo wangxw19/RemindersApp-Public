@@ -18,10 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.remindersapp.R
 import com.example.remindersapp.data.Priority
 import com.example.remindersapp.data.Reminder
 import com.example.remindersapp.ui.theme.RemindersAppTheme
@@ -47,14 +50,13 @@ fun ReminderListScreen(
     ) { innerPadding ->
         ReminderList(
             reminders = uiState.reminders,
-            onEvent = viewModel::onEvent, // 统一传递 onEvent
+            onEvent = viewModel::onEvent,
             onItemClick = { reminder -> onItemClick(reminder.id) },
             modifier = Modifier.padding(innerPadding)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderList(
     reminders: List<Reminder>,
@@ -63,15 +65,11 @@ fun ReminderList(
     modifier: Modifier = Modifier
 ) {
     if (reminders.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "没有提醒事项",
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
+        EmptyContent(
+            title = "空空如也",
+            subtitle = "点击右下角的 '+' 按钮，\n添加你的第一个提醒吧！",
+            modifier = modifier
+        )
     } else {
         LazyColumn(
             modifier = modifier.padding(horizontal = 8.dp),
@@ -91,6 +89,41 @@ fun ReminderList(
                 HorizontalDivider()
             }
         }
+    }
+}
+
+@Composable
+fun EmptyContent(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_empty_state_illustration),
+            contentDescription = "空列表插图",
+            modifier = Modifier.size(120.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -232,5 +265,13 @@ fun ReminderListPreview() {
             onEvent = {},
             onItemClick = {}
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EmptyContentPreview() {
+    RemindersAppTheme {
+        EmptyContent(title = "Title", subtitle = "Subtitle")
     }
 }
