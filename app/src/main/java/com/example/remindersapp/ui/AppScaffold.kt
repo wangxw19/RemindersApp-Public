@@ -2,6 +2,7 @@ package com.example.remindersapp.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -33,7 +34,12 @@ fun AppScaffold(
                     label = { Text("所有提醒") },
                     selected = currentRoute == AppDestinations.LIST_ROUTE,
                     onClick = {
-                        navController.navigate(AppDestinations.LIST_ROUTE)
+                        navController.navigate(AppDestinations.LIST_ROUTE) {
+                            // 避免在后台堆栈中重复创建同一页面的实例
+                            launchSingleTop = true
+                            // 从抽屉导航到任何页面时，都将导航图的起始页作为弹出目标
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        }
                         scope.launch { drawerState.close() }
                     }
                 )
@@ -41,23 +47,23 @@ fun AppScaffold(
                     label = { Text("已完成") },
                     selected = currentRoute == AppDestinations.COMPLETED_ROUTE,
                     onClick = {
-                        navController.navigate(AppDestinations.COMPLETED_ROUTE)
+                        navController.navigate(AppDestinations.COMPLETED_ROUTE) {
+                            launchSingleTop = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        }
                         scope.launch { drawerState.close() }
                     }
                 )
             }
         }
     ) {
-        // 全局 Scaffold，只包含在所有页面都共用的 TopAppBar
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text("提醒事项") },
                     navigationIcon = {
                         IconButton(onClick = {
-                            scope.launch {
-                                drawerState.apply { if (isClosed) open() else close() }
-                            }
+                            scope.launch { drawerState.open() }
                         }) {
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "打开菜单")
                         }

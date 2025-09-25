@@ -73,6 +73,7 @@ dependencies {
 
     // Room for database
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation(libs.androidx.compose.animation)
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
 

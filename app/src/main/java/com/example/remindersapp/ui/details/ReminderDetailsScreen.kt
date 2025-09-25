@@ -3,29 +3,24 @@ package com.example.remindersapp.ui.details
 import android.Manifest
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.remindersapp.data.Priority
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.flow.collectLatest
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -35,16 +30,53 @@ fun ReminderDetailsScreen(
 ) {
     val uiState = viewModel.uiState
     val context = LocalContext.current
+    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
 
-    // Android 13+ 的通知权限处理
     val postNotificationPermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            null
-        }
+        } else null
 
-    // Date and Time Picker state
+    LaunchedEffect(key1 = true) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is DetailsScreenEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+                is DetailsScreenEvent.NavigateUp -> {
+                    onNavigateUp()
+                }
+            }
+        }
+    }
+
+    val navigateBack = {
+        if (viewModel.hasChanges) {
+            showUnsavedChangesDialog = true
+        } else {
+            onNavigateUp()
+        }
+    }
+
+    BackHandler(onBack = navigateBack)
+
+    if (showUnsavedChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnsavedChangesDialog = false },
+            title = { Text("未保存的更改") },
+            text = { Text("您有未保存的更改，确定要放弃吗？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUnsavedChangesDialog = false
+                    onNavigateUp()
+                }) { Text("放弃") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnsavedChangesDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = uiState.dueDate)
@@ -54,72 +86,34 @@ fun ReminderDetailsScreen(
         is24Hour = true
     )
 
-    // --- DatePickerDialog ---
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     showDatePicker = false
-                    // 将选择的日期更新到 ViewModel
-                    datePickerState.selectedDateMillis?.let {
-                        val calendar = Calendar.getInstance()
-                        calendar.timeInMillis = it
-                        // 保持时间部分不变，只更新日期
-                        val currentDueDate = Calendar.getInstance()
-                        currentDueDate.timeInMillis = uiState.dueDate ?: System.currentTimeMillis()
-                        currentDueDate.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
-                        viewModel.updateDueDate(currentDueDate.timeInMillis)
-                    }
-                    showTimePicker = true // 选择日期后接着显示时间选择器
+                    viewModel.onEvent(DetailsUIEvent.OnDateSelected(datePickerState.selectedDateMillis))
+                    showTimePicker = true
                 }) { Text("确定") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("取消") } }
+        ) { DatePicker(state = datePickerState) }
     }
 
-    // --- TimePickerDialog ---
     if (showTimePicker) {
-        // 这是正确实现的 TimePickerDialog
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             modifier = Modifier.wrapContentSize(),
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            text = {
-                TimePicker(state = timePickerState)
-            },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+            text = { TimePicker(state = timePickerState) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showTimePicker = false
-                        val currentDueDate = Calendar.getInstance()
-                        currentDueDate.timeInMillis = uiState.dueDate ?: System.currentTimeMillis()
-                        currentDueDate.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                        currentDueDate.set(Calendar.MINUTE, timePickerState.minute)
-                        currentDueDate.set(Calendar.SECOND, 0)
-                        viewModel.updateDueDate(currentDueDate.timeInMillis)
-                    }
-                ) { Text("确定") }
+                TextButton(onClick = {
+                    showTimePicker = false
+                    viewModel.onEvent(DetailsUIEvent.OnTimeSelected(timePickerState.hour, timePickerState.minute))
+                }) { Text("确定") }
             },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("取消") }
-            }
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("取消") } }
         )
-    }
-
-    // --- 新增代码：监听一次性事件 ---
-    LaunchedEffect(key1 = true) {
-        viewModel.events.collectLatest { event ->
-            when (event) {
-                is DetailsScreenEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 
     Scaffold(
@@ -127,8 +121,7 @@ fun ReminderDetailsScreen(
             TopAppBar(
                 title = { Text(if (uiState.isNew) "新建提醒" else "编辑提醒") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        // 这个 Icon 现在使用的是新的 AutoMirrored 版本
+                    IconButton(onClick = navigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
@@ -136,20 +129,14 @@ fun ReminderDetailsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-
-                viewModel.saveReminder()
-
                 if (uiState.dueDate != null && (uiState.dueDate ?: 0) > System.currentTimeMillis()) {
                     if (postNotificationPermission == null || postNotificationPermission.status.isGranted) {
-                        viewModel.saveReminder()
-                        onNavigateUp()
+                        viewModel.onEvent(DetailsUIEvent.OnSaveClick)
                     } else {
                         postNotificationPermission.launchPermissionRequest()
-                        Toast.makeText(context, "需要通知权限才能设置提醒", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    viewModel.saveReminder()
-                    onNavigateUp()
+                    viewModel.onEvent(DetailsUIEvent.OnSaveClick)
                 }
             }) {
                 Icon(Icons.Default.Check, contentDescription = "保存")
@@ -160,52 +147,70 @@ fun ReminderDetailsScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
-                .fillMaxSize()
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
                 value = uiState.title,
-                onValueChange = viewModel::updateTitle,
+                onValueChange = { viewModel.onEvent(DetailsUIEvent.OnTitleChange(it)) },
                 label = { Text("标题") },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = uiState.notes,
-                onValueChange = viewModel::updateNotes,
+                onValueChange = { viewModel.onEvent(DetailsUIEvent.OnNotesChange(it)) },
                 label = { Text("备注") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
+                modifier = Modifier.fillMaxWidth().height(150.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 日期时间显示和设置区域
-            Text("设置提醒时间", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = uiState.dueDate?.let { formatDateTime(it) } ?: "未设置",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                if (uiState.dueDate != null) {
-                    IconButton(onClick = { viewModel.updateDueDate(null) }) {
-                        Icon(Icons.Default.Clear, contentDescription = "清除时间")
+            // 优先级选择
+            Text("优先级", style = MaterialTheme.typography.titleMedium)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                Priority.values().forEach { priority ->
+                    SegmentedButton(
+                        selected = uiState.priority == priority,
+                        onClick = { viewModel.onEvent(DetailsUIEvent.OnPriorityChange(priority)) },
+                        shape = SegmentedButtonDefaults.shape()
+                    ) {
+                        Text(priority.displayName)
                     }
+                }
+            }
+
+            // 日期时间选择
+            Text("设置提醒", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = uiState.dueDate != null,
+                    onClick = {
+                        viewModel.onEvent(DetailsUIEvent.OnSetDefaultTime)
+                        showDatePicker = true
+                    },
+                    label = { Text(uiState.dueDate?.let { formatDate(it) } ?: "设置日期") }
+                )
+
+                if (uiState.dueDate != null) {
+                    FilterChip(
+                        selected = true,
+                        onClick = { showTimePicker = true },
+                        label = { Text(formatTime(uiState.dueDate!!)) }
+                    )
                 }
             }
         }
     }
 }
 
-private fun formatDateTime(millis: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+private fun formatDate(millis: Long): String {
+    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    return formatter.format(Date(millis))
+}
+
+private fun formatTime(millis: Long): String {
+    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     return formatter.format(Date(millis))
 }

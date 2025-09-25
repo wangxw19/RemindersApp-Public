@@ -1,8 +1,5 @@
 package com.example.remindersapp.ui.details
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,8 +17,21 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
+
 sealed class DetailsScreenEvent {
     data class ShowToast(val message: String) : DetailsScreenEvent()
+    object NavigateUp : DetailsScreenEvent()
+}
+
+sealed class DetailsUIEvent {
+    data class OnTitleChange(val title: String) : DetailsUIEvent()
+    data class OnNotesChange(val notes: String) : DetailsUIEvent()
+    data class OnPriorityChange(val priority: Priority) : DetailsUIEvent()
+    object OnSetDefaultTime : DetailsUIEvent()
+    data class OnDateSelected(val dateMillis: Long?) : DetailsUIEvent()
+    data class OnTimeSelected(val hour: Int, val minute: Int) : DetailsUIEvent()
+    object OnClearDate : DetailsUIEvent()
+    object OnSaveClick : DetailsUIEvent()
 }
 
 data class ReminderDetailsUiState(
@@ -35,7 +45,7 @@ data class ReminderDetailsUiState(
 
 @HiltViewModel
 class ReminderDetailsViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val repository: ReminderRepository,
     private val scheduler: Scheduler
 ) : ViewModel() {
@@ -44,7 +54,6 @@ class ReminderDetailsViewModel @Inject constructor(
         private set
 
     private var initialUiState: ReminderDetailsUiState? = null
-
     val hasChanges: Boolean
         get() = uiState != initialUiState && initialUiState != null
 
@@ -62,7 +71,7 @@ class ReminderDetailsViewModel @Inject constructor(
                     title = reminder.title,
                     notes = reminder.notes ?: "",
                     dueDate = reminder.dueDate,
-                    priority = reminder.priority, // <-- 现在类型匹配了
+                    priority = reminder.priority,
                     isNew = false
                 )
                 uiState = loadedState
@@ -73,31 +82,51 @@ class ReminderDetailsViewModel @Inject constructor(
         }
     }
 
-    fun updateTitle(newTitle: String) {
-        uiState = uiState.copy(title = newTitle)
+    fun onEvent(event: DetailsUIEvent) {
+        when (event) {
+            is DetailsUIEvent.OnTitleChange -> uiState = uiState.copy(title = event.title)
+            is DetailsUIEvent.OnNotesChange -> uiState = uiState.copy(notes = event.notes)
+            is DetailsUIEvent.OnPriorityChange -> uiState = uiState.copy(priority = event.priority)
+            is DetailsUIEvent.OnSetDefaultTime -> setDefaultReminderTime()
+            is DetailsUIEvent.OnDateSelected -> updateDate(event.dateMillis)
+            is DetailsUIEvent.OnTimeSelected -> updateTime(event.hour, event.minute)
+            is DetailsUIEvent.OnClearDate -> uiState = uiState.copy(dueDate = null)
+            is DetailsUIEvent.OnSaveClick -> saveReminder()
+        }
     }
 
-    fun updateNotes(newNotes: String) {
-        uiState = uiState.copy(notes = newNotes)
-    }
-
-    fun updateDueDate(newDate: Long?) {
-        uiState = uiState.copy(dueDate = newDate)
-    }
-
-    fun setDefaultReminderTime() {
+    private fun setDefaultReminderTime() {
         if (uiState.dueDate == null) {
-            val calendar = Calendar.getInstance()
-            calendar.add(Calendar.HOUR_OF_DAY, 1)
+            val calendar = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 1) }
             uiState = uiState.copy(dueDate = calendar.timeInMillis)
         }
     }
 
-    fun updatePriority(newPriority: Priority) {
-        uiState = uiState.copy(priority = newPriority)
+    private fun updateDate(selectedDateMillis: Long?) {
+        if (selectedDateMillis == null) return
+        val newDate = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+        val currentDueDate = Calendar.getInstance().apply {
+            timeInMillis = uiState.dueDate ?: System.currentTimeMillis()
+        }
+        currentDueDate.set(
+            newDate.get(Calendar.YEAR),
+            newDate.get(Calendar.MONTH),
+            newDate.get(Calendar.DAY_OF_MONTH)
+        )
+        uiState = uiState.copy(dueDate = currentDueDate.timeInMillis)
     }
 
-    fun saveReminder() {
+    private fun updateTime(hour: Int, minute: Int) {
+        val currentDueDate = Calendar.getInstance().apply {
+            timeInMillis = uiState.dueDate ?: System.currentTimeMillis()
+        }
+        currentDueDate.set(Calendar.HOUR_OF_DAY, hour)
+        currentDueDate.set(Calendar.MINUTE, minute)
+        currentDueDate.set(Calendar.SECOND, 0)
+        uiState = uiState.copy(dueDate = currentDueDate.timeInMillis)
+    }
+
+    private fun saveReminder() {
         viewModelScope.launch {
             if (uiState.title.isBlank()) {
                 _events.emit(DetailsScreenEvent.ShowToast("标题不能为空"))
@@ -130,6 +159,7 @@ class ReminderDetailsViewModel @Inject constructor(
                 }
             }
             initialUiState = uiState
+            _events.emit(DetailsScreenEvent.NavigateUp)
         }
     }
 }

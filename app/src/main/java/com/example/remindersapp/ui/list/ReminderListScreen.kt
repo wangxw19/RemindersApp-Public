@@ -1,9 +1,6 @@
 package com.example.remindersapp.ui.list
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,19 +18,13 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.remindersapp.data.Priority
 import com.example.remindersapp.data.Reminder
 import com.example.remindersapp.ui.theme.RemindersAppTheme
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
-// --- 这是解决问题的关键改动：使用 2025 年最新的 SwipeToDismiss API ---
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-
-import androidx.compose.material3.Scaffold // 确保导入 Scaffold
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderListScreen(
@@ -43,31 +34,28 @@ fun ReminderListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 重新将 Scaffold 添加回来，但 TopAppBar 是全局的
     Scaffold(
-        // TopAppBar 现在由 AppScaffold 管理，所以这里留空
         floatingActionButton = {
             FloatingActionButton(onClick = onFabClick) {
                 Icon(Icons.Default.Add, contentDescription = "添加提醒")
             }
         }
-    ) { innerPadding -> // 使用 Scaffold 提供的 padding
+    ) { innerPadding ->
         ReminderList(
             reminders = uiState.reminders,
-            onCheckedChange = viewModel::toggleCompleted,
+            onEvent = viewModel::onEvent, // 统一传递 onEvent
             onItemClick = { reminder -> onItemClick(reminder.id) },
-            onSwipeToDelete = viewModel::deleteReminder,
-            modifier = Modifier.padding(innerPadding) // 应用 padding
+            modifier = Modifier.padding(innerPadding)
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3ai::class)
 @Composable
 fun ReminderList(
     reminders: List<Reminder>,
-    onCheckedChange: (Reminder) -> Unit,
+    onEvent: (ReminderListEvent) -> Unit,
     onItemClick: (Reminder) -> Unit,
-    onSwipeToDelete: (Reminder) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (reminders.isEmpty()) {
@@ -88,11 +76,11 @@ fun ReminderList(
             items(items = reminders, key = { it.id }) { reminder ->
                 SwipeToDeleteContainer(
                     item = reminder,
-                    onDelete = onSwipeToDelete
+                    onDelete = { onEvent(ReminderListEvent.OnSwipeToDelete(it)) }
                 ) {
                     ReminderItem(
                         reminder = it,
-                        onCheckedChange = { onCheckedChange(it) },
+                        onCheckedChange = { onEvent(ReminderListEvent.OnToggleCompleted(it)) },
                         onItemClick = { onItemClick(it) }
                     )
                 }
@@ -101,6 +89,7 @@ fun ReminderList(
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,10 +100,8 @@ fun <T> SwipeToDeleteContainer(
     content: @Composable (T) -> Unit
 ) {
     var isRemoved by remember { mutableStateOf(false) }
-    // 使用最新的 `rememberSwipeToDismissBoxState` API
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
-            // 判断滑动方向是否是我们期望的删除方向
             if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
                 isRemoved = true
                 true
@@ -122,7 +109,6 @@ fun <T> SwipeToDeleteContainer(
                 false
             }
         },
-        // 设置滑动阈值，超过一半即可触发
         positionalThreshold = { it * .5f }
     )
 
@@ -145,9 +131,7 @@ fun <T> SwipeToDeleteContainer(
             backgroundContent = {
                 DeleteBackground(swipeDismissState = dismissState)
             },
-            // `content` 参数已更名为 `content`，这里保持不变，但要确保传入的是一个 Composable lambda
             content = { content(item) },
-            // 仅允许从右向左滑动
             enableDismissFromStartToEnd = false
         )
     }
@@ -156,7 +140,6 @@ fun <T> SwipeToDeleteContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteBackground(swipeDismissState: SwipeToDismissBoxState) {
-    // 判断滑动方向以决定背景颜色
     val color = when (swipeDismissState.targetValue) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
         else -> Color.Transparent
@@ -177,7 +160,6 @@ fun DeleteBackground(swipeDismissState: SwipeToDismissBoxState) {
     }
 }
 
-
 @Composable
 fun ReminderItem(
     reminder: Reminder,
@@ -192,6 +174,11 @@ fun ReminderItem(
             .padding(vertical = 12.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Canvas(modifier = Modifier.size(4.dp, 36.dp)) {
+            drawRect(color = reminder.priority.color)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+
         Checkbox(
             checked = reminder.isCompleted,
             onCheckedChange = { onCheckedChange() }
@@ -233,14 +220,13 @@ private fun formatDateTime(millis: Long): String {
 fun ReminderListPreview() {
     RemindersAppTheme {
         val sampleReminders = listOf(
-            Reminder(id = 1, title = "买牛奶", notes = "在楼下超市买", dueDate = null, isCompleted = false, priority = 0),
-            Reminder(id = 2, title = "写代码", notes = "完成滑动删除功能", dueDate = System.currentTimeMillis(), isCompleted = true, priority = 0)
+            Reminder(id = 1, title = "买牛奶", notes = "在楼下超市买", dueDate = null, isCompleted = false, priority = Priority.HIGH),
+            Reminder(id = 2, title = "写代码", notes = "完成滑动删除功能", dueDate = System.currentTimeMillis(), isCompleted = true, priority = Priority.NONE)
         )
         ReminderList(
             reminders = sampleReminders,
-            onCheckedChange = {},
-            onItemClick = {},
-            onSwipeToDelete = {}
+            onEvent = {},
+            onItemClick = {}
         )
     }
 }
