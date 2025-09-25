@@ -1,4 +1,5 @@
 import java.io.ByteArrayOutputStream
+import java.io.File // <-- 新增 import
 
 plugins {
     id("com.android.application")
@@ -8,7 +9,6 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-// --- 函数：执行 Git 命令并获取版本号 ---
 fun getVersionCodeFromGit(): Int {
     return try {
         val byteOut = ByteArrayOutputStream()
@@ -18,7 +18,6 @@ fun getVersionCodeFromGit(): Int {
         }
         byteOut.toString().trim().toInt()
     } catch (e: Exception) {
-        // 在 Git 不可用或出错的情况下，提供一个安全的默认值
         1
     }
 }
@@ -31,10 +30,7 @@ android {
         applicationId = "com.example.remindersapp"
         minSdk = 26
         targetSdk = 35
-
-        // --- 核心改动：自动设置 versionCode ---
         versionCode = getVersionCodeFromGit()
-        // versionName 依然手动维护，用于市场展示
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -42,6 +38,10 @@ android {
             useSupportLibrary = true
         }
     }
+
+    // --- 这是实现自定义文件名的最终、最简单的方案 ---
+    // 这个配置会影响所有构建变体（debug 和 release）
+    setProperty("archivesBaseName", "RemindersApp-v${defaultConfig.versionName}")
 
     buildTypes {
         release {
