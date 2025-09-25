@@ -1,10 +1,12 @@
 package com.example.remindersapp.ui.list
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -57,6 +59,8 @@ fun ReminderListScreen(
     }
 }
 
+// --- 核心改动 1：为 ReminderList 添加 @OptIn(ExperimentalFoundationApi::class) ---
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReminderList(
     reminders: List<Reminder>,
@@ -77,6 +81,10 @@ fun ReminderList(
         ) {
             items(items = reminders, key = { it.id }) { reminder ->
                 SwipeToDeleteContainer(
+                    // --- 核心改动 2：将 animateItemPlacement 修饰符传递给列表项的根容器 ---
+                    modifier = Modifier.animateItemPlacement(
+                        animationSpec = tween(durationMillis = 300)
+                    ),
                     item = reminder,
                     onDelete = { onEvent(ReminderListEvent.OnSwipeToDelete(it)) }
                 ) {
@@ -131,6 +139,7 @@ fun EmptyContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> SwipeToDeleteContainer(
+    modifier: Modifier = Modifier, // 接收 animateItemPlacement
     item: T,
     onDelete: (T) -> Unit,
     animationDuration: Int = 500,
@@ -157,6 +166,7 @@ fun <T> SwipeToDeleteContainer(
     }
 
     AnimatedVisibility(
+        modifier = modifier, // 将修饰符应用到这里
         visible = !isRemoved,
         exit = shrinkVertically(
             animationSpec = tween(durationMillis = animationDuration),
@@ -203,10 +213,23 @@ fun ReminderItem(
     onCheckedChange: () -> Unit,
     onItemClick: () -> Unit
 ) {
+    // --- 核心改动 3：为背景和文本颜色添加动画状态 ---
+    val targetBackgroundColor by animateColorAsState(
+        targetValue = if (reminder.isCompleted) MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp) else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(durationMillis = 300),
+        label = "ItemBackgroundColor"
+    )
+
+    val targetContentColor by animateColorAsState(
+        targetValue = if (reminder.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 300),
+        label = "ItemContentColor"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(targetBackgroundColor) // 应用动画背景色
             .clickable(onClick = onItemClick)
             .padding(vertical = 12.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -226,13 +249,13 @@ fun ReminderItem(
                 text = reminder.title,
                 style = MaterialTheme.typography.bodyLarge,
                 textDecoration = if (reminder.isCompleted) TextDecoration.LineThrough else null,
-                color = if (reminder.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                color = targetContentColor // 应用动画文本颜色
             )
             if (!reminder.notes.isNullOrBlank()) {
                 Text(
                     text = reminder.notes,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, // 备注颜色保持不变
                     maxLines = 1
                 )
             }
