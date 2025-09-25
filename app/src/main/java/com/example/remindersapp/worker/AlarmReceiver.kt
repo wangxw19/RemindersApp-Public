@@ -26,29 +26,41 @@ class AlarmReceiver : BroadcastReceiver() {
     @Inject
     lateinit var repository: ReminderRepository
 
+    // 使用 IO 调度器进行数据库查询
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
-        val reminderId = intent.getIntExtra("REMINDER_ID", -1)
-        if (reminderId == -1) return
-
+        // --- 核心改动 1：获取 PendingResult，阻止 Receiver 被立即杀死 ---
         val pendingResult = goAsync()
+
+        val reminderId = intent.getIntExtra("REMINDER_ID", -1)
+        if (reminderId == -1) {
+            pendingResult.finish() // 如果 ID 无效，也要结束
+            return
+        }
 
         scope.launch {
             try {
-                val reminder = repository.getReminderStream(reminderId).first() ?: return@launch
+                // 异步从数据库获取提醒详情
+                val reminder = repository.getReminderStream(reminderId).first()
 
-                if (appState.isAppInForeground.value) {
-                    ringtonePlayer.start()
-                    appState.startRinging(reminder)
-                } else {
-                    val serviceIntent = Intent(context, RingtoneService::class.java).apply {
-                        putExtra(RingtoneService.EXTRA_TITLE, reminder.title)
-                        putExtra(RingtoneService.EXTRA_CONTENT, reminder.notes)
+                if (reminder != null) {
+                    // 判断 App 是否在前台
+                    if (appState.isAppInForeground.value) {
+                        // 在前台：直接播放铃声，并更新全局 UI 状态
+                        ringtonePlayer.start()
+                        appState.startRinging(reminder)
+                    } else {
+                        // 在后台：启动 RingtoneService，通过通知提醒
+                        val serviceIntent = Intent(context, RingtoneService::class.java).apply {
+                            putExtra(RingtoneService.EXTRA_TITLE, reminder.title)
+                            putExtra(RingtoneService.EXTRA_CONTENT, reminder.notes)
+                        }
+                        ContextCompat.startForegroundService(context, serviceIntent)
                     }
-                    ContextCompat.startForegroundService(context, serviceIntent)
                 }
             } finally {
+                // --- 核心改动 2：无论成功与否，都要调用 finish()，通知系统异步工作已完成 ---
                 pendingResult.finish()
             }
         }
