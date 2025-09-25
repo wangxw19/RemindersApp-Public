@@ -22,7 +22,10 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "reminders_database"
-        ).build()
+        )
+            // --- 新增：添加迁移策略 ---
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
