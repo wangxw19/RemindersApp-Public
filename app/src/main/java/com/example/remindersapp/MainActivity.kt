@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -17,6 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    // --- 核心改动 1：使用 activity-ktx 的 viewModels() 委托来获取 ViewModel ---
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,9 +30,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    // --- 核心改动 2：将 Activity 持有的 ViewModel 实例作为参数传递下去 ---
                     AppScaffold(
                         navController = navController,
-                        viewModel = viewModel // 传递 ViewModel
+                        viewModel = viewModel
                     ) { innerPadding ->
                         AppNavHost(
                             navController = navController,

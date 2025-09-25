@@ -1,4 +1,3 @@
-
 package com.example.remindersapp
 import androidx.lifecycle.ViewModel
 import com.example.remindersapp.data.AppState
@@ -10,4 +9,3 @@ class MainViewModel @Inject constructor(
     val appState: AppState,
     val ringtonePlayer: RingtonePlayer
 ) : ViewModel()
-
