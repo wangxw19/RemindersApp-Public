@@ -6,7 +6,6 @@ import com.example.remindersapp.data.*
 import com.example.remindersapp.worker.ReminderScheduler
 import com.example.remindersapp.worker.RingtonePlayer
 import com.example.remindersapp.worker.Scheduler
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,14 +13,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/**
- * Hilt 模块，负责提供具体的实例 (使用 @Provides).
- * 比如数据库实例、DAO 实例，以及全局状态单例.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    // --- 提供数据库和 DAO ---
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -38,6 +34,21 @@ object AppModule {
         return appDatabase.reminderDao()
     }
 
+    // --- 提供接口的实现 ---
+    // 使用 @Provides 同样可以实现接口绑定，逻辑更清晰
+    @Provides
+    @Singleton
+    fun provideReminderRepository(dao: ReminderDao): ReminderRepository {
+        return OfflineReminderRepository(dao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideScheduler(@ApplicationContext context: Context): Scheduler {
+        return ReminderScheduler(context)
+    }
+
+    // --- 提供全局单例 ---
     @Provides
     @Singleton
     fun provideAppState(): AppState = AppState()
@@ -47,24 +58,4 @@ object AppModule {
     fun provideRingtonePlayer(@ApplicationContext context: Context): RingtonePlayer {
         return RingtonePlayer(context)
     }
-}
-
-/**
- * Hilt 模块，负责将接口与其实现进行绑定 (使用 @Binds).
- * @Binds 比 @Provides 更高效，是绑定接口的首选.
- */
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class BindingsModule {
-    @Binds
-    @Singleton
-    abstract fun bindReminderRepository(
-        offlineReminderRepository: OfflineReminderRepository
-    ): ReminderRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindScheduler(
-        reminderScheduler: ReminderScheduler
-    ): Scheduler
 }
