@@ -33,10 +33,13 @@ class ReminderScheduler @Inject constructor(
 
         // 创建一个指向 AlarmReceiver 的 Intent，用于在闹钟触发时发送广播
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            // 将标题和内容放入 Intent extras，供后续的 Service 使用
-            // 使用 RingtoneService 中定义的常量，确保 Key 的一致性
+            // 将标题和内容放入 Intent extras，供后续的 Service 或 UI 使用
             putExtra(RingtoneService.EXTRA_TITLE, reminder.title)
             putExtra(RingtoneService.EXTRA_CONTENT, reminder.notes)
+
+            // --- 这是解决问题的核心修正 ---
+            // 必须将 reminderId 传递给 Receiver，以便它能从数据库中查找到对应的提醒
+            putExtra("REMINDER_ID", reminder.id)
         }
 
         // 创建一个 PendingIntent。
@@ -51,7 +54,6 @@ class ReminderScheduler @Inject constructor(
         )
 
         // 在设置闹钟前，检查应用是否拥有精确闹钟权限 (适用于 Android 12+)
-        // canScheduleExactAlarms() 是 Android 12 (API 31) 引入的
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
                 // 拥有权限，设置一个高精度的、能在设备空闲时唤醒的闹钟
@@ -62,7 +64,7 @@ class ReminderScheduler @Inject constructor(
                 )
             } else {
                 // 没有权限，降级为不精确的闹钟。
-                // 此时，应用应该在详情页引导用户去开启权限。
+                // 应用应该在详情页引导用户去开启权限。
                 alarmManager.set(AlarmManager.RTC_WAKEUP, reminderTime, pendingIntent)
             }
         } else {
@@ -76,8 +78,8 @@ class ReminderScheduler @Inject constructor(
     }
 
     override fun cancel(reminderId: Int) {
-        // 创建一个与 schedule 方法中完全一致的 Intent 和 PendingIntent
-        // 这样系统才能通过 .equals() 方法找到并取消它
+        // 创建一个与 schedule 方法中 intent filter 匹配的 PendingIntent 来取消它
+        // 注意：这里的 Intent 只需要 component 和 requestCode 能匹配即可，无需 extras
         val intent = Intent(context, AlarmReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
