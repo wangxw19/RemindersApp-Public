@@ -41,23 +41,21 @@ fun ReminderListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 这个 Screen 只负责自己的 FAB
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = onFabClick) {
                 Icon(Icons.Default.Add, contentDescription = "添加提醒")
             }
         }
-    ) { innerPadding -> // 它会从 AppScaffold 继承 padding
+    ) { innerPadding ->
         ReminderList(
             reminders = uiState.reminders,
             onEvent = viewModel::onEvent,
-            onItemClick = { onItemClick(it.id) },
+            onItemClick = onItemClick,
             modifier = Modifier.padding(innerPadding)
         )
     }
 }
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -81,15 +79,17 @@ fun ReminderList(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(items = reminders, key = { it.id }) { reminder ->
-                // --- 核心改动：使用 SwipeToDeleteContainer 的简化版 ---
                 SwipeToDeleteContainer(
+                    modifier = Modifier.animateItemPlacement(
+                        animationSpec = tween(durationMillis = 300)
+                    ),
                     item = reminder,
                     onDelete = { onEvent(ReminderListEvent.OnSwipeToDelete(it)) }
                 ) {
                     ReminderItem(
                         reminder = it,
                         onCheckedChange = { onEvent(ReminderListEvent.OnToggleCompleted(it)) },
-                        onItemClick = { onItemClick(it) }
+                        onItemClick = { onItemClick(it.id) }
                     )
                 }
                 HorizontalDivider()
@@ -133,34 +133,51 @@ fun EmptyContent(
     }
 }
 
-// --- 核心改动：简化 SwipeToDeleteContainer，不再处理动画，只负责滑动检测 ---
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> SwipeToDeleteContainer(
+    modifier: Modifier = Modifier,
     item: T,
     onDelete: (T) -> Unit,
     content: @Composable (T) -> Unit
 ) {
+    var isRemoved by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             if (it == SwipeToDismissBoxValue.EndToStart) {
-                onDelete(item) // --- 核心改动：立即通知 ViewModel ---
+                isRemoved = true
                 true
             } else {
                 false
             }
-        },
-        positionalThreshold = { it * .5f }
+        }
     )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            DeleteBackground(swipeDismissState = dismissState)
-        },
-        content = { content(item) },
-        enableDismissFromStartToEnd = false
-    )
+    LaunchedEffect(key1 = isRemoved) {
+        if (isRemoved) {
+            kotlinx.coroutines.delay(500)
+            onDelete(item)
+        }
+    }
+
+    AnimatedVisibility(
+        modifier = modifier,
+        visible = !isRemoved,
+        exit = shrinkVertically(
+            animationSpec = tween(durationMillis = 500),
+            shrinkTowards = Alignment.Top
+        ) + fadeOut()
+    ) {
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = {
+                DeleteBackground(swipeDismissState = dismissState)
+            },
+            content = { content(item) },
+            enableDismissFromStartToEnd = false
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -218,7 +235,7 @@ fun ReminderItem(
 
             Checkbox(
                 checked = reminder.isCompleted,
-                onCheckedChange = { onCheckedChange() }
+                onCheckedChange = onCheckedChange
             )
             Spacer(modifier = Modifier.width(16.dp))
 
