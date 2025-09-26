@@ -8,10 +8,12 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.example.remindersapp.ui.AppNavHost
-import com.example.remindersapp.worker.AlarmReceiver
 import com.example.remindersapp.ui.theme.RemindersAppTheme
+import com.example.remindersapp.worker.AlarmReceiver
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,7 +29,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
         setContent {
-            RemindersAppTheme {
+            // 从 ViewModel 收集主题设置状态
+            val themeSetting by viewModel.themeSetting.collectAsState()
+
+            RemindersAppTheme(themeSetting = themeSetting) { // 将状态传递给主题
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

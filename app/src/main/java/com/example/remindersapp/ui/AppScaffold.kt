@@ -5,7 +5,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,6 +21,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.remindersapp.MainViewModel
 import com.example.remindersapp.data.Reminder
+import com.example.remindersapp.data.ThemeSetting
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +39,7 @@ fun AppScaffold(
     val appState = viewModel.appState
     val ringtonePlayer = viewModel.ringtonePlayer
     val ringingReminder by appState.currentRingingReminder.collectAsState()
+    val currentTheme by viewModel.themeSetting.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -63,6 +68,37 @@ fun AppScaffold(
                         scope.launch { drawerState.close() }
                     }
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                // --- 主题切换部分 ---
+                Text("主题设置", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.LIGHT) }) {
+                        Icon(
+                            imageVector = Icons.Default.LightMode,
+                            contentDescription = "浅色模式",
+                            tint = if (currentTheme == ThemeSetting.LIGHT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.DARK) }) {
+                        Icon(
+                            imageVector = Icons.Default.DarkMode,
+                            contentDescription = "深色模式",
+                            tint = if (currentTheme == ThemeSetting.DARK) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.SYSTEM) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "跟随系统",
+                            tint = if (currentTheme == ThemeSetting.SYSTEM) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     ) {

@@ -81,6 +81,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // --- 新增：实现扩展图标库 ---
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // Room for database
     implementation(libs.androidx.room.runtime)
@@ -89,6 +91,9 @@ dependencies {
 
     // WorkManager for background tasks
     implementation(libs.androidx.work.runtime.ktx)
+
+    // DataStore for settings
+    implementation(libs.androidx.datastore.preferences)
 
     // Hilt for Dependency Injection
     implementation(libs.hilt.android)
