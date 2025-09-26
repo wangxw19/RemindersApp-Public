@@ -8,7 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,6 +43,7 @@ fun AppScaffold(
     val ringtonePlayer = viewModel.ringtonePlayer
     val ringingReminder by appState.currentRingingReminder.collectAsState()
     val currentTheme by viewModel.themeSetting.collectAsState()
+    val isMuted by viewModel.isMuted.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -69,7 +73,6 @@ fun AppScaffold(
                     }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                // --- 主题切换部分 ---
                 Text("主题设置", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
                 Row(
                     modifier = Modifier
@@ -111,6 +114,37 @@ fun AppScaffold(
                             scope.launch { drawerState.open() }
                         }) {
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "打开菜单")
+                        }
+                    },
+                    // --- 新增：顶部操作按钮 ---
+                    actions = {
+                        // 1. 停止当前铃声按钮 (仅在响铃时显示)
+                        if (ringingReminder != null) {
+                            IconButton(onClick = {
+                                ringtonePlayer.stop()
+                                appState.stopRinging()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.StopCircle,
+                                    contentDescription = "停止当前铃声",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        // 2. 应用级静音切换按钮
+                        IconButton(onClick = { viewModel.toggleMuteSetting() }) {
+                            if (isMuted) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsOff,
+                                    contentDescription = "取消静音"
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.Notifications,
+                                    contentDescription = "静音应用"
+                                )
+                            }
                         }
                     }
                 )

@@ -20,7 +20,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // --- 新增：提供一个应用级的协程作用域 ---
+    // --- 提供一个应用级的协程作用域 ---
     @Provides
     @Singleton
     fun provideApplicationScope(): CoroutineScope {
@@ -47,7 +47,9 @@ object AppModule {
     }
 
     // --- 提供接口的实现 ---
-    // 使用 @Provides 同样可以实现接口绑定，逻辑更清晰
+    // UserSettingsRepository 带有 @Inject constructor 和 @Singleton，Hilt 会自动处理它的提供，
+    // 我们无需在此处为其编写 @Provides 方法。
+
     @Provides
     @Singleton
     fun provideReminderRepository(dao: ReminderDao): ReminderRepository {
@@ -65,9 +67,14 @@ object AppModule {
     @Singleton
     fun provideAppState(): AppState = AppState()
 
+    // --- 核心修正：更新 RingtonePlayer 的提供者方法 ---
     @Provides
     @Singleton
-    fun provideRingtonePlayer(@ApplicationContext context: Context): RingtonePlayer {
-        return RingtonePlayer(context)
+    fun provideRingtonePlayer(
+        @ApplicationContext context: Context,
+        userSettingsRepository: UserSettingsRepository // <-- Hilt 会自动注入这个依赖
+    ): RingtonePlayer {
+        // 将获取到的依赖传递给 RingtonePlayer 的构造函数
+        return RingtonePlayer(context, userSettingsRepository)
     }
 }

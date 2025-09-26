@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.remindersapp.data.AppState
 import com.example.remindersapp.data.ReminderRepository
 import com.example.remindersapp.data.ThemeSetting
-import com.example.remindersapp.data.ThemeSettingsRepository
+import com.example.remindersapp.data.UserSettingsRepository
 import com.example.remindersapp.worker.RingtonePlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,15 +19,22 @@ class MainViewModel @Inject constructor(
     val appState: AppState,
     val ringtonePlayer: RingtonePlayer,
     private val repository: ReminderRepository,
-    private val themeSettingsRepository: ThemeSettingsRepository // 注入主题仓库
+    private val userSettingsRepository: UserSettingsRepository
 ) : ViewModel() {
 
-    // 将主题设置流转换为 StateFlow，以便 Compose UI 可以观察它
-    val themeSetting = themeSettingsRepository.themeSettingFlow
+    val themeSetting = userSettingsRepository.themeSettingFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = ThemeSetting.SYSTEM // 提供一个初始值
+            initialValue = ThemeSetting.SYSTEM
+        )
+
+    // --- 新增：暴露静音状态 ---
+    val isMuted = userSettingsRepository.isMutedFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false
         )
 
     fun triggerInAppRinging(reminderId: Int) {
@@ -40,10 +47,17 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // 提供一个更新主题设置的方法
     fun updateThemeSetting(newSetting: ThemeSetting) {
         viewModelScope.launch {
-            themeSettingsRepository.setThemeSetting(newSetting)
+            userSettingsRepository.setThemeSetting(newSetting)
+        }
+    }
+
+    // --- 新增：提供切换静音状态的方法 ---
+    fun toggleMuteSetting() {
+        viewModelScope.launch {
+            val currentMuteState = isMuted.first()
+            userSettingsRepository.setIsMuted(!currentMuteState)
         }
     }
 }
