@@ -44,7 +44,12 @@
             </intent-filter>
         </receiver>
 
-        <!-- - 新增：声明我们的铃声服务 - -->
+        <!-- - 新增：注册 SnoozeReceiver - -->
+        <receiver
+            android:name=".worker.SnoozeReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <service
             android:name=".worker.RingtoneService"
             android:enabled="true"

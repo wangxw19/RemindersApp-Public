@@ -11,11 +11,23 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    // --- 新增：提供一个应用级的协程作用域 ---
+    @Provides
+    @Singleton
+    fun provideApplicationScope(): CoroutineScope {
+        // SupervisorJob 确保一个子协程的失败不会影响其他子协程
+        // Dispatchers.Default 适用于 CPU 密集型任务，这里用于数据库操作很合适
+        return CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
 
     // --- 提供数据库和 DAO ---
     @Provides

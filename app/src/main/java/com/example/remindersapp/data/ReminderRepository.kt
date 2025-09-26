@@ -12,17 +12,16 @@ interface ReminderRepository {
     suspend fun updateReminder(reminder: Reminder)
     suspend fun deleteReminder(reminder: Reminder)
     fun getCompletedRemindersStream(): Flow<List<Reminder>>
+    // --- 新增接口方法 ---
+    suspend fun getFutureIncompleteReminders(): List<Reminder>
 }
 
 class OfflineReminderRepository @Inject constructor(
     private val reminderDao: ReminderDao
 ) : ReminderRepository {
     override fun getIncompleteRemindersStream(): Flow<List<Reminder>> {
-        // --- 哨兵 R1: 确认数据请求已到达 Repository ---
         Log.d("AppDebug", "Repository: getIncompleteRemindersStream CALLED")
-
         return reminderDao.getIncompleteReminders().onEach { reminders ->
-            // --- 哨兵 R2: 确认 Room 的 Flow 正在发射数据 ---
             Log.d("AppDebug", "Repository: Flow EMITTED ${reminders.size} items from DB")
         }
     }
@@ -41,4 +40,9 @@ class OfflineReminderRepository @Inject constructor(
 
     override fun getCompletedRemindersStream(): Flow<List<Reminder>> =
         reminderDao.getCompletedReminders()
+
+    // --- 新增实现 ---
+    override suspend fun getFutureIncompleteReminders(): List<Reminder> {
+        return reminderDao.getFutureIncompleteReminders(System.currentTimeMillis())
+    }
 }
