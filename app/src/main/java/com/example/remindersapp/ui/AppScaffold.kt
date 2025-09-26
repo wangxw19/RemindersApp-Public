@@ -24,15 +24,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppScaffold(
     navController: NavController,
-    viewModel: MainViewModel, // --- 核心改动 1：通过参数接收 ViewModel ---
-    mainContent: @Composable (PaddingValues) -> Unit
+    viewModel: MainViewModel,
+    content: @Composable (PaddingValues) -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // --- 核心改动 2：直接从传入的 viewModel 中获取状态和播放器 ---
     val appState = viewModel.appState
     val ringtonePlayer = viewModel.ringtonePlayer
     val ringingReminder by appState.currentRingingReminder.collectAsState()
@@ -94,10 +93,9 @@ fun AppScaffold(
                         }
                     )
                 }
-            }
-        ) { innerPadding ->
-            mainContent(innerPadding)
-        }
+            },
+            content = content
+        )
     }
 }
 
