@@ -1,39 +1,26 @@
 package com.example.remindersapp.ui.list
 
 import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.remindersapp.R
 import com.example.remindersapp.data.Priority
 import com.example.remindersapp.data.Reminder
 import com.example.remindersapp.ui.common.EmptyContent
 import com.example.remindersapp.ui.common.ReminderItem
 import com.example.remindersapp.ui.common.SwipeToDeleteContainer
 import com.example.remindersapp.ui.theme.RemindersAppTheme
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,8 +78,10 @@ fun ReminderList(
                 ) {
                     ReminderItem(
                         reminder = it,
-                        // --- 核心修正：我们不关心 Checkbox 的新状态，直接传递 reminder 对象 ---
-                        onCheckedChange = { onEvent(ReminderListEvent.OnToggleCompleted(it)) },
+                        // --- 关键修正 ---
+                        // onCheckedChange 的 lambda 会接收一个 Boolean 参数。我们用 `_` 忽略它，
+                        // 并确保 onEvent 调用的是外层作用域中的 `reminder` 对象 (`it`)。
+                        onCheckedChange = { _ -> onEvent(ReminderListEvent.OnToggleCompleted(reminder)) },
                         modifier = Modifier.clickable { onItemClick(it.id) }
                     )
                 }
