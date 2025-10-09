@@ -13,10 +13,12 @@ import com.example.remindersapp.MainViewModel
 import com.example.remindersapp.ui.completed.CompletedListScreen
 import com.example.remindersapp.ui.details.ReminderDetailsScreen
 import com.example.remindersapp.ui.list.ReminderListScreen
+import com.example.remindersapp.ui.trash.TrashListScreen
 
 object AppDestinations {
     const val LIST_ROUTE = "list"
     const val COMPLETED_ROUTE = "completed"
+    const val TRASH_ROUTE = "trash"
     const val DETAILS_ROUTE = "details"
     const val ITEM_ID_ARG = "itemId"
 }
@@ -58,6 +60,12 @@ fun AppNavHost(
                     onItemClick = { reminderId ->
                         navController.navigate("${AppDestinations.DETAILS_ROUTE}/$reminderId")
                     }
+                )
+            }
+            
+            composable(route = AppDestinations.TRASH_ROUTE) {
+                TrashListScreen(
+                    onNavigateUp = { navController.navigateUp() }
                 )
             }
         }

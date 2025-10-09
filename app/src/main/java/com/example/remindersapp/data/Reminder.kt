@@ -13,5 +13,6 @@ data class Reminder(
     val notes: String?,
     val dueDate: Long?,
     val isCompleted: Boolean = false,
+    val isDeleted: Boolean = false, // 新增：删除状态
     val priority: Priority // <-- 修改类型
 )

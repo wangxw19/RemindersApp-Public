@@ -1,5 +1,9 @@
 package com.example.remindersapp.ui
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -19,12 +23,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.remindersapp.MainViewModel
 import com.example.remindersapp.data.Reminder
 import com.example.remindersapp.data.ThemeSetting
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,6 +78,17 @@ fun AppScaffold(
                         scope.launch { drawerState.close() }
                     }
                 )
+                NavigationDrawerItem(
+                    label = { Text("回收站") },
+                    selected = currentRoute == AppDestinations.TRASH_ROUTE,
+                    onClick = {
+                        navController.navigate(AppDestinations.TRASH_ROUTE) {
+                            launchSingleTop = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        }
+                        scope.launch { drawerState.close() }
+                    }
+                )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 Text("主题设置", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
                 Row(
@@ -102,6 +119,26 @@ fun AppScaffold(
                         )
                     }
                 }
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                
+                Text("数据管理", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+                NavigationDrawerItem(
+                    label = { Text("导出数据") },
+                    selected = false,
+                    onClick = { 
+                        // 简单地关闭抽屉，不执行任何操作
+                        scope.launch { drawerState.close() }
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("导入数据") },
+                    selected = false,
+                    onClick = { 
+                        // 简单地关闭抽屉，不执行任何操作
+                        scope.launch { drawerState.close() }
+                    }
+                )
             }
         }
     ) {

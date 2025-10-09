@@ -71,7 +71,7 @@ class ReminderListViewModel @Inject constructor(
     private fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch {
             scheduler.cancel(reminder.id)
-            reminderRepository.deleteReminder(reminder)
+            reminderRepository.deleteReminder(reminder) // 现在这是软删除
         }
     }
 }

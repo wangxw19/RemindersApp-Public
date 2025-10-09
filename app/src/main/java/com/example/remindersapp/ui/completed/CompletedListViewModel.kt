@@ -39,7 +39,7 @@ class CompletedListViewModel @Inject constructor(
 
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch {
-            repository.deleteReminder(reminder)
+            repository.deleteReminder(reminder) // 现在这是软删除
         }
     }
 }

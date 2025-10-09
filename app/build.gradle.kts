@@ -103,6 +103,9 @@ dependencies {
     // Permissions
     implementation(libs.accompanist.permissions)
 
+    // JSON处理
+    implementation(libs.gson)
+
     // 测试库
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

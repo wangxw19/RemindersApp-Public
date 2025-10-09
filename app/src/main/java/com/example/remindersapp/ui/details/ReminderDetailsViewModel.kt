@@ -143,6 +143,7 @@ class ReminderDetailsViewModel @Inject constructor(
                 notes = uiState.notes,
                 dueDate = uiState.dueDate,
                 isCompleted = isCompletedState,
+                isDeleted = false, // 新建或编辑的提醒默认不是删除状态
                 priority = uiState.priority
             )
 
