@@ -35,6 +35,14 @@ interface ReminderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(reminders: List<Reminder>)
 
+    // --- 新增：用于搜索功能 ---
+    @Query("SELECT * FROM reminders WHERE isCompleted = 0 AND (title LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%') ORDER BY dueDate ASC, priority DESC")
+    fun searchActiveReminders(query: String): Flow<List<Reminder>>
+    
+    // --- 新增：用于搜索已完成提醒 ---
+    @Query("SELECT * FROM reminders WHERE isCompleted = 1 AND (title LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%') ORDER BY dueDate DESC")
+    fun searchCompletedReminders(query: String): Flow<List<Reminder>>
+    
     // --- 新增：用于开机重启时，获取所有未完成且时间在未来的提醒 ---
     @Query("SELECT * FROM reminders WHERE isCompleted = 0 AND dueDate > :currentTimeMillis")
     suspend fun getFutureIncompleteReminders(currentTimeMillis: Long): List<Reminder>

@@ -17,6 +17,9 @@ interface ReminderRepository {
     suspend fun getAllReminders(): List<Reminder>  // Added for backup
     suspend fun replaceAllReminders(reminders: List<Reminder>)  // Added for backup
     suspend fun appendReminders(reminders: List<Reminder>)  // Added for appending import data
+    fun searchActiveReminders(query: String): Flow<List<Reminder>>  // Added for search functionality
+    fun searchCompletedReminders(query: String): Flow<List<Reminder>>  // Added for search functionality
+    fun searchTrashReminders(query: String): Flow<List<TrashReminder>>  // Added for search functionality
     
     // --- Trash-related methods ---
     fun getAllTrashRemindersStream(): Flow<List<TrashReminder>>
@@ -104,6 +107,36 @@ class OfflineReminderRepository @Inject constructor(
             // Reset IDs to 0 so Room will auto-generate new IDs for the new entries
             val remindersWithResetIds = remindersToAdd.map { it.copy(id = 0) }
             reminderDao.insertAll(remindersWithResetIds)
+        }
+    }
+
+    override fun searchActiveReminders(query: String): Flow<List<Reminder>> {
+        return if (query.isEmpty()) {
+            // If query is empty, return all active (incomplete) reminders
+            reminderDao.getIncompleteReminders()
+        } else {
+            // Otherwise, search for reminders matching the query
+            reminderDao.searchActiveReminders(query)
+        }
+    }
+
+    override fun searchCompletedReminders(query: String): Flow<List<Reminder>> {
+        return if (query.isEmpty()) {
+            // If query is empty, return all completed reminders
+            reminderDao.getCompletedReminders()
+        } else {
+            // Otherwise, search for completed reminders matching the query
+            reminderDao.searchCompletedReminders(query)
+        }
+    }
+
+    override fun searchTrashReminders(query: String): Flow<List<TrashReminder>> {
+        return if (query.isEmpty()) {
+            // If query is empty, return all trash reminders
+            trashReminderDao.getAllTrashReminders()
+        } else {
+            // Otherwise, search for trash reminders matching the query
+            trashReminderDao.searchTrashReminders(query)
         }
     }
 

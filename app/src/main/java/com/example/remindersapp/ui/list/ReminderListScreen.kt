@@ -30,6 +30,7 @@ fun ReminderListScreen(
     viewModel: ReminderListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -38,12 +39,28 @@ fun ReminderListScreen(
             }
         }
     ) { innerPadding ->
-        ReminderList(
-            reminders = uiState.reminders,
-            onEvent = viewModel::onEvent,
-            onItemClick = onItemClick,
-            modifier = Modifier.padding(innerPadding)
-        )
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                label = { Text("Search reminders") },
+                singleLine = true
+            )
+            ReminderList(
+                reminders = uiState.reminders,
+                onEvent = viewModel::onEvent,
+                onItemClick = onItemClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
+            )
+        }
     }
 }
 

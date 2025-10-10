@@ -13,6 +13,7 @@ import com.example.remindersapp.MainViewModel
 import com.example.remindersapp.ui.completed.CompletedListScreen
 import com.example.remindersapp.ui.details.ReminderDetailsScreen
 import com.example.remindersapp.ui.list.ReminderListScreen
+import com.example.remindersapp.ui.search.SearchScreen
 import com.example.remindersapp.ui.settings.SettingsScreen
 import com.example.remindersapp.ui.trash.TrashListScreen
 
@@ -22,6 +23,7 @@ object AppDestinations {
     const val DETAILS_ROUTE = "details"
     const val TRASH_ROUTE = "trash"
     const val SETTINGS_ROUTE = "settings"
+    const val SEARCH_ROUTE = "search"
     const val ITEM_ID_ARG = "itemId"
 }
 
@@ -74,6 +76,15 @@ fun AppNavHost(
             composable(route = AppDestinations.SETTINGS_ROUTE) {
                 SettingsScreen(
                     onNavigateUp = { navController.navigateUp() }
+                )
+            }
+            
+            composable(route = AppDestinations.SEARCH_ROUTE) {
+                SearchScreen(
+                    onNavigateUp = { navController.navigateUp() },
+                    onItemClick = { reminderId ->
+                        navController.navigate("${AppDestinations.DETAILS_ROUTE}/$reminderId")
+                    }
                 )
             }
         }

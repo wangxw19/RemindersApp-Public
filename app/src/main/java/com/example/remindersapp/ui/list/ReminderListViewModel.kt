@@ -7,8 +7,12 @@ import com.example.remindersapp.data.Reminder
 import com.example.remindersapp.data.ReminderRepository
 import com.example.remindersapp.worker.Scheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -33,17 +37,25 @@ class ReminderListViewModel @Inject constructor(
         Log.d("AppDebug", "ViewModel: ReminderListViewModel INITIALIZED")
     }
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ReminderListUiState> =
-        reminderRepository.getIncompleteRemindersStream()
-            .map { reminders ->
-                Log.d("AppDebug", "ViewModel: Mapping ${reminders.size} items to UiState")
-                ReminderListUiState(reminders)
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ReminderListUiState()
-            )
+        _searchQuery.flatMapLatest { query ->
+            reminderRepository.searchActiveReminders(query)
+        }.map { reminders ->
+            Log.d("AppDebug", "ViewModel: Mapping ${reminders.size} items to UiState")
+            ReminderListUiState(reminders)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ReminderListUiState()
+        )
+
+    fun onSearchQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
+    }
 
     fun onEvent(event: ReminderListEvent) {
         when (event) {

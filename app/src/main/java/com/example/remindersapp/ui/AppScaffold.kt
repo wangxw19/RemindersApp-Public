@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.Notifications
@@ -83,6 +84,17 @@ fun AppScaffold(
                     }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                // --- Added: Search functionality ---
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Search, contentDescription = "Search Reminders") },
+                    label = { Text("Search") },
+                    selected = currentRoute == AppDestinations.SEARCH_ROUTE,
+                    onClick = {
+                        navController.navigate(AppDestinations.SEARCH_ROUTE)
+                        scope.launch { drawerState.close() }
+                    }
+                )
+                
                 // --- Added: Data management entry ---
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Data Management") },
