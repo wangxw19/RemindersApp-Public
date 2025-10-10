@@ -10,20 +10,26 @@ interface ReminderRepository {
     fun getReminderStream(id: Int): Flow<Reminder?>
     suspend fun insertReminder(reminder: Reminder): Long
     suspend fun updateReminder(reminder: Reminder)
-    suspend fun deleteReminder(reminder: Reminder) // 软删除
-    suspend fun deleteReminderPermanently(id: Int) // 永久删除
-    suspend fun restoreReminder(id: Int) // 恢复提醒
+    suspend fun deleteReminder(reminder: Reminder)
     fun getCompletedRemindersStream(): Flow<List<Reminder>>
-    fun getDeletedRemindersStream(): Flow<List<Reminder>> // 获取已删除的提醒
-    // --- 新增接口方法 ---
+    // --- Added interface methods ---
     suspend fun getFutureIncompleteReminders(): List<Reminder>
-    suspend fun getAllReminders(): List<Reminder>
-    suspend fun saveAllReminders(reminders: List<Reminder>)
+    suspend fun getAllReminders(): List<Reminder>  // Added for backup
+    suspend fun replaceAllReminders(reminders: List<Reminder>)  // Added for backup
+    suspend fun appendReminders(reminders: List<Reminder>)  // Added for appending import data
+    
+    // --- Trash-related methods ---
+    fun getAllTrashRemindersStream(): Flow<List<TrashReminder>>
+    suspend fun insertTrashReminder(trashReminder: TrashReminder)
+    suspend fun updateTrashReminder(trashReminder: TrashReminder)
+    suspend fun deleteTrashReminderById(id: Int)
+    suspend fun clearTrash()
+    suspend fun restoreFromTrash(trashReminder: TrashReminder): Reminder
 }
 
 class OfflineReminderRepository @Inject constructor(
     private val reminderDao: ReminderDao,
-    private val trashReminderDao: TrashReminderDao // 新增：注入回收站DAO
+    private val trashReminderDao: TrashReminderDao // Add the TrashReminderDao
 ) : ReminderRepository {
     override fun getIncompleteRemindersStream(): Flow<List<Reminder>> {
         Log.d("AppDebug", "Repository: getIncompleteRemindersStream CALLED")
@@ -41,40 +47,26 @@ class OfflineReminderRepository @Inject constructor(
     override suspend fun updateReminder(reminder: Reminder) =
         reminderDao.update(reminder)
 
-    // 软删除：将提醒移动到回收站并标记为已删除
     override suspend fun deleteReminder(reminder: Reminder) {
-        // 首先保存到回收站
+        // Move reminder to trash instead of deleting permanently
         val trashReminder = TrashReminder(
-            originalId = reminder.id,
+            id = 0, // Let Room auto-generate the ID
             title = reminder.title,
             notes = reminder.notes,
             dueDate = reminder.dueDate,
             isCompleted = reminder.isCompleted,
+            deletedAt = System.currentTimeMillis(),
             priority = reminder.priority
         )
-        trashReminderDao.insert(trashReminder)
-        
-        // 然后在主表中标记为已删除
-        reminderDao.markAsDeleted(reminder.id)
-    }
-
-    override suspend fun deleteReminderPermanently(id: Int) {
-        reminderDao.deletePermanently(id)
-    }
-
-    override suspend fun restoreReminder(id: Int) {
-        reminderDao.restoreFromTrash(id)
-        // 从回收站删除对应的记录（如果存在）
-        trashReminderDao.deleteById(id)
+        insertTrashReminder(trashReminder)
+        // Delete from main reminders
+        reminderDao.delete(reminder)
     }
 
     override fun getCompletedRemindersStream(): Flow<List<Reminder>> =
         reminderDao.getCompletedReminders()
 
-    override fun getDeletedRemindersStream(): Flow<List<Reminder>> =
-        reminderDao.getDeletedReminders()
-
-    // --- 新增实现 ---
+    // --- Added implementations ---
     override suspend fun getFutureIncompleteReminders(): List<Reminder> {
         return reminderDao.getFutureIncompleteReminders(System.currentTimeMillis())
     }
@@ -83,11 +75,73 @@ class OfflineReminderRepository @Inject constructor(
         return reminderDao.getAllReminders()
     }
 
-    override suspend fun saveAllReminders(reminders: List<Reminder>) {
-        // 清除现有数据并插入新数据
-        reminderDao.deleteAllPermanently()
-        for (reminder in reminders) {
-            reminderDao.insert(reminder)
+    override suspend fun replaceAllReminders(reminders: List<Reminder>) {
+        // Reset IDs to 0 so Room will auto-generate new IDs
+        val remindersWithResetIds = reminders.map { it.copy(id = 0) }
+        reminderDao.deleteAllReminders()
+        reminderDao.insertAll(remindersWithResetIds)
+    }
+
+    override suspend fun appendReminders(reminders: List<Reminder>) {
+        // Get all existing reminders to check for duplicates
+        val existingReminders = getAllReminders()
+        
+        // Filter out reminders that already exist (based on all properties)
+        val remindersToAdd = reminders.filter { newReminder ->
+            // Check if an identical reminder already exists in the database
+            !existingReminders.any { existingReminder ->
+                newReminder.title == existingReminder.title &&
+                newReminder.notes == existingReminder.notes &&
+                newReminder.dueDate == existingReminder.dueDate &&
+                newReminder.isCompleted == existingReminder.isCompleted &&
+                newReminder.isDeleted == existingReminder.isDeleted &&
+                newReminder.priority == existingReminder.priority
+            }
         }
+        
+        // Add only the reminders that don't already exist
+        if (remindersToAdd.isNotEmpty()) {
+            // Reset IDs to 0 so Room will auto-generate new IDs for the new entries
+            val remindersWithResetIds = remindersToAdd.map { it.copy(id = 0) }
+            reminderDao.insertAll(remindersWithResetIds)
+        }
+    }
+
+    // --- Trash-related implementations ---
+    override fun getAllTrashRemindersStream(): Flow<List<TrashReminder>> =
+        trashReminderDao.getAllTrashReminders()
+
+    override suspend fun insertTrashReminder(trashReminder: TrashReminder) =
+        trashReminderDao.insert(trashReminder)
+
+    override suspend fun updateTrashReminder(trashReminder: TrashReminder) =
+        trashReminderDao.update(trashReminder)
+
+    override suspend fun deleteTrashReminderById(id: Int) =
+        trashReminderDao.permanentlyDeleteById(id)
+
+    override suspend fun clearTrash() =
+        trashReminderDao.clearTrash()
+
+    override suspend fun restoreFromTrash(trashReminder: TrashReminder): Reminder {
+        // Create a Reminder from the TrashReminder
+        val reminder = Reminder(
+            id = 0, // Let Room auto-generate the ID
+            title = trashReminder.title,
+            notes = trashReminder.notes,
+            dueDate = trashReminder.dueDate,
+            isCompleted = trashReminder.isCompleted,
+            isDeleted = false, // No longer deleted
+            priority = trashReminder.priority
+        )
+        
+        // Insert the reminder back to main table
+        val newId = insertReminder(reminder)
+        
+        // Remove from trash
+        trashReminderDao.permanentlyDeleteById(trashReminder.id)
+        
+        // Return updated reminder with new ID
+        return reminder.copy(id = newId.toInt())
     }
 }

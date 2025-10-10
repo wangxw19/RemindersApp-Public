@@ -6,31 +6,35 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
+// --- 核心修正：使用现代的、非弃用的 API，并处理警告 ---
 fun getVersionCodeFromGit(): Int {
     return try {
-        val byteOut = ByteArrayOutputStream()
+        val stdout = ByteArrayOutputStream()
         project.exec {
             commandLine("git", "rev-list", "--count", "HEAD")
-            standardOutput = byteOut
+            standardOutput = stdout
         }
-        byteOut.toString().trim().toInt()
-    } catch (e: Exception) {
+        stdout.toString().trim().toInt()
+    } catch (_: Exception) {
         1
     }
 }
 
 android {
     namespace = "com.example.remindersapp"
-    compileSdk = 35
+    // --- 核心修正：升级到最新的 SDK 版本以解决警告 ---
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.remindersapp"
         minSdk = 26
-        targetSdk = 35
+        // --- 核心修正：升级到最新的 SDK 版本以解决警告 ---
+        targetSdk = 36
         versionCode = getVersionCodeFromGit()
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -81,7 +85,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    // --- 新增：实现扩展图标库 ---
     implementation(libs.androidx.compose.material.icons.extended)
 
     // Room for database
@@ -105,6 +108,15 @@ dependencies {
 
     // JSON处理
     implementation(libs.gson)
+
+    // 序列化
+    implementation(libs.kotlinx.serialization.json)
+
+    // 安全和加密库
+    implementation(libs.androidx.security.crypto)
+    // --- 核心修正：确保使用正确的库别名 ---
+    implementation(libs.sqlcipher)
+    implementation(libs.sqlite.ktx)
 
     // 测试库
     testImplementation(libs.junit)

@@ -3,10 +3,11 @@ package com.example.remindersapp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.remindersapp.data.AppState
+import com.example.remindersapp.data.DataBackupManager
 import com.example.remindersapp.data.ReminderRepository
 import com.example.remindersapp.data.ThemeSetting
+import com.example.remindersapp.data.TrashReminder
 import com.example.remindersapp.data.UserSettingsRepository
-import com.example.remindersapp.utils.DataExportImportManager
 import com.example.remindersapp.worker.RingtonePlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,9 +20,9 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     val appState: AppState,
     val ringtonePlayer: RingtonePlayer,
-    val repository: ReminderRepository, // 改为public以在AppScaffold中访问
+    val repository: ReminderRepository, // Changed to public to be accessed in AppScaffold
     private val userSettingsRepository: UserSettingsRepository,
-    private val dataExportImportManager: DataExportImportManager
+    private val dataBackupManager: DataBackupManager
 ) : ViewModel() {
 
     val themeSetting = userSettingsRepository.themeSettingFlow
@@ -31,12 +32,20 @@ class MainViewModel @Inject constructor(
             initialValue = ThemeSetting.SYSTEM
         )
 
-    // --- 新增：暴露静音状态 ---
+    // --- Added: Expose mute status ---
     val isMuted = userSettingsRepository.isMutedFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = false
+        )
+
+    // --- Trash-related properties ---
+    val trashReminders = repository.getAllTrashRemindersStream()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
     fun triggerInAppRinging(reminderId: Int) {
@@ -55,7 +64,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // --- 新增：提供切换静音状态的方法 ---
+    // --- Added: Provide method to toggle mute status ---
     fun toggleMuteSetting() {
         viewModelScope.launch {
             val currentMuteState = isMuted.first()
@@ -63,10 +72,24 @@ class MainViewModel @Inject constructor(
         }
     }
     
-    // 移除导出方法，因为已在UI中直接处理
-    
-    // --- 新增：导入数据方法 ---
-    suspend fun importData(uri: android.net.Uri): Boolean {
-        return dataExportImportManager.importData(uri)
+    // Removed export method as it's handled directly in UI
+
+    // --- Trash-related methods ---
+    fun restoreFromTrash(trashReminder: TrashReminder) {
+        viewModelScope.launch {
+            repository.restoreFromTrash(trashReminder)
+        }
+    }
+
+    fun permanentlyDeleteTrashReminder(trashReminder: TrashReminder) {
+        viewModelScope.launch {
+            repository.deleteTrashReminderById(trashReminder.id)
+        }
+    }
+
+    fun clearTrash() {
+        viewModelScope.launch {
+            repository.clearTrash()
+        }
     }
 }

@@ -4,6 +4,7 @@ agp = "8.6.0"
 kotlin = "2.0.10"
 ksp = "2.0.10-1.0.24"
 hilt = "2.51.1"
+kotlinxSerialization = "1.7.1"
 
 # --- 核心库版本 ---
 coreKtx = "1.15.0"
@@ -15,6 +16,11 @@ room = "2.6.1"
 workManager = "2.9.0"
 datastore = "1.1.1"
 accompanistPermissions = "0.35.1-alpha"
+androidxSecurity = "1.1.0-alpha07"
+# --- 核心修正：直接使用托管在 Maven Central 的 SQLCipher 版本 ---
+sqlcipher = "4.5.4"
+androidxSqlite = "2.4.0"
+
 
 # --- Compose BOM ---
 composeBom = "2024.09.00"
@@ -42,7 +48,6 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-# --- 新增：扩展图标库 ---
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # --- 数据库 ---
@@ -66,6 +71,16 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 # --- JSON处理 ---
 gson = { group = "com.google.code.gson", name = "gson", version = "2.10.1" }
 
+# --- 序列化 ---
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+# --- 安全和加密库 ---
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "androidxSecurity" }
+# --- 核心修正：回归到 Zetetic 的库，但使用 Maven Central 上的版本 ---
+sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
+sqlite-ktx = { group = "androidx.sqlite", name = "sqlite-ktx", version.ref = "androidxSqlite" }
+
+
 # --- 测试库 ---
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
@@ -78,3 +93,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -2,25 +2,28 @@
 
 pluginManagement {
     repositories {
-        // 优先使用官方源
+        // --- 关键改动 ---
+        // 1. 将阿里云镜像源放在最前面，作为首选仓库
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        // 2. 保留官方源作为备用
         google()
         mavenCentral()
         gradlePluginPortal()
-        // 如果官方源无法访问，再使用镜像
-        // maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // maven { url = uri("https://maven.aliyun.com/repository/google") }
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 优先使用官方源
+        // --- 关键改动 ---
+        // 1. 同样，将阿里云镜像源放在最前面
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        // 2. 保留官方源作为备用
         google()
         mavenCentral()
-        // 如果官方源无法访问，再使用镜像
-        // maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // maven { url = uri("https://maven.aliyun.com/repository/google") }
     }
 }
 

@@ -5,7 +5,10 @@ import com.example.remindersapp.ui.theme.HighPriorityColor
 import com.example.remindersapp.ui.theme.LowPriorityColor
 import com.example.remindersapp.ui.theme.MediumPriorityColor
 import com.example.remindersapp.ui.theme.NoPriorityColor
+import kotlinx.serialization.Serializable
 
+// --- MODIFIED: Add @Serializable annotation ---
+@Serializable
 enum class Priority(val color: Color, val displayName: String) {
     HIGH(HighPriorityColor, "高"),
     MEDIUM(MediumPriorityColor, "中"),

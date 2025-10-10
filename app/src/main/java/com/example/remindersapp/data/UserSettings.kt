@@ -13,25 +13,25 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// 主题选项保持不变
+// Theme options remain unchanged
 enum class ThemeSetting {
     SYSTEM, LIGHT, DARK
 }
 
-// 通过属性委托创建 DataStore 实例，名称保持为 "settings"
+// Create DataStore instance via property delegation, name remains "settings"
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
-class UserSettingsRepository @Inject constructor( // 类名重命名
+class UserSettingsRepository @Inject constructor( // Class name renamed
     @ApplicationContext private val context: Context
 ) {
     private object PreferencesKeys {
         val THEME_SETTING = stringPreferencesKey("theme_setting")
-        // 新增：静音设置的 Key
+        // Added: Key for mute setting
         val IS_MUTED = booleanPreferencesKey("is_muted")
     }
 
-    // --- 主题设置部分保持不变 ---
+    // --- Theme setting part remains unchanged ---
     val themeSettingFlow: Flow<ThemeSetting> = context.dataStore.data
         .map { preferences ->
             val themeName = preferences[PreferencesKeys.THEME_SETTING] ?: ThemeSetting.SYSTEM.name
@@ -48,10 +48,10 @@ class UserSettingsRepository @Inject constructor( // 类名重命名
         }
     }
 
-    // --- 新增：静音设置部分 ---
+    // --- Added: Mute setting part ---
     val isMutedFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.IS_MUTED] ?: false // 默认不静音
+            preferences[PreferencesKeys.IS_MUTED] ?: false // Default is unmuted
         }
 
     suspend fun setIsMuted(isMuted: Boolean) {

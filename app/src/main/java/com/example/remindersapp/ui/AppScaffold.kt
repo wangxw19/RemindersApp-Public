@@ -9,8 +9,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Settings
@@ -57,7 +59,8 @@ fun AppScaffold(
             ModalDrawerSheet {
                 Spacer(Modifier.height(12.dp))
                 NavigationDrawerItem(
-                    label = { Text("所有提醒") },
+                    icon = { Icon(Icons.Default.List, contentDescription = "All Reminders") },
+                    label = { Text("All Reminders") },
                     selected = currentRoute == AppDestinations.LIST_ROUTE,
                     onClick = {
                         navController.navigate(AppDestinations.LIST_ROUTE) {
@@ -68,7 +71,8 @@ fun AppScaffold(
                     }
                 )
                 NavigationDrawerItem(
-                    label = { Text("已完成") },
+                    icon = { Icon(Icons.Default.Archive, contentDescription = "Completed") },
+                    label = { Text("Completed") },
                     selected = currentRoute == AppDestinations.COMPLETED_ROUTE,
                     onClick = {
                         navController.navigate(AppDestinations.COMPLETED_ROUTE) {
@@ -78,8 +82,19 @@ fun AppScaffold(
                         scope.launch { drawerState.close() }
                     }
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                // --- Added: Data management entry ---
                 NavigationDrawerItem(
-                    label = { Text("回收站") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Data Management") },
+                    label = { Text("Data Management") },
+                    selected = currentRoute == AppDestinations.SETTINGS_ROUTE,
+                    onClick = {
+                        navController.navigate(AppDestinations.SETTINGS_ROUTE)
+                        scope.launch { drawerState.close() }
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Trash") },
                     selected = currentRoute == AppDestinations.TRASH_ROUTE,
                     onClick = {
                         navController.navigate(AppDestinations.TRASH_ROUTE) {
@@ -90,7 +105,7 @@ fun AppScaffold(
                     }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                Text("主题设置", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+                Text("Theme Settings", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -100,21 +115,21 @@ fun AppScaffold(
                     IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.LIGHT) }) {
                         Icon(
                             imageVector = Icons.Default.LightMode,
-                            contentDescription = "浅色模式",
+                            contentDescription = "Light Mode",
                             tint = if (currentTheme == ThemeSetting.LIGHT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.DARK) }) {
                         Icon(
                             imageVector = Icons.Default.DarkMode,
-                            contentDescription = "深色模式",
+                            contentDescription = "Dark Mode",
                             tint = if (currentTheme == ThemeSetting.DARK) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { viewModel.updateThemeSetting(ThemeSetting.SYSTEM) }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "跟随系统",
+                            contentDescription = "Follow System",
                             tint = if (currentTheme == ThemeSetting.SYSTEM) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -122,20 +137,20 @@ fun AppScaffold(
                 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                Text("数据管理", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+                Text("Data Management", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
                 NavigationDrawerItem(
-                    label = { Text("导出数据") },
+                    label = { Text("Export Data") },
                     selected = false,
                     onClick = { 
-                        // 简单地关闭抽屉，不执行任何操作
+                        // Simply close the drawer, no operation performed
                         scope.launch { drawerState.close() }
                     }
                 )
                 NavigationDrawerItem(
-                    label = { Text("导入数据") },
+                    label = { Text("Import Data") },
                     selected = false,
                     onClick = { 
-                        // 简单地关闭抽屉，不执行任何操作
+                        // Simply close the drawer, no operation performed
                         scope.launch { drawerState.close() }
                     }
                 )
@@ -145,17 +160,15 @@ fun AppScaffold(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("提醒事项") },
+                    title = { Text("Reminders") },
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch { drawerState.open() }
                         }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "打开菜单")
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Menu")
                         }
                     },
-                    // --- 新增：顶部操作按钮 ---
                     actions = {
-                        // 1. 停止当前铃声按钮 (仅在响铃时显示)
                         if (ringingReminder != null) {
                             IconButton(onClick = {
                                 ringtonePlayer.stop()
@@ -163,23 +176,21 @@ fun AppScaffold(
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.StopCircle,
-                                    contentDescription = "停止当前铃声",
+                                    contentDescription = "Stop Current Ringtone",
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
                         }
-
-                        // 2. 应用级静音切换按钮
                         IconButton(onClick = { viewModel.toggleMuteSetting() }) {
                             if (isMuted) {
                                 Icon(
                                     imageVector = Icons.Default.NotificationsOff,
-                                    contentDescription = "取消静音"
+                                    contentDescription = "Unmute"
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Outlined.Notifications,
-                                    contentDescription = "静音应用"
+                                    contentDescription = "Mute App"
                                 )
                             }
                         }
@@ -231,7 +242,7 @@ fun RingingReminderBottomSheet(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Button(onClick = onStopClick) {
-                Text("停止")
+                Text("Stop")
             }
         }
     }

@@ -3,7 +3,10 @@ package com.example.remindersapp.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import kotlinx.serialization.Serializable
 
+// --- MODIFIED: Add @Serializable annotation ---
+@Serializable
 @Entity(tableName = "reminders")
 @TypeConverters(PriorityConverter::class) // <-- 应用转换器
 data class Reminder(

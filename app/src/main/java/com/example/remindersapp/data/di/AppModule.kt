@@ -3,7 +3,6 @@ package com.example.remindersapp.data.di
 import android.content.Context
 import androidx.room.Room
 import com.example.remindersapp.data.*
-import com.example.remindersapp.utils.DataExportImportManager
 import com.example.remindersapp.worker.ReminderScheduler
 import com.example.remindersapp.worker.RingtonePlayer
 import com.example.remindersapp.worker.Scheduler
@@ -86,15 +85,5 @@ object AppModule {
     ): RingtonePlayer {
         // 将获取到的依赖传递给 RingtonePlayer 的构造函数
         return RingtonePlayer(context, userSettingsRepository)
-    }
-    
-    // --- 提供数据导出/导入管理器 ---
-    @Provides
-    @Singleton
-    fun provideDataExportImportManager(
-        @ApplicationContext context: Context,
-        repository: ReminderRepository
-    ): DataExportImportManager {
-        return DataExportImportManager(context, repository)
     }
 }
